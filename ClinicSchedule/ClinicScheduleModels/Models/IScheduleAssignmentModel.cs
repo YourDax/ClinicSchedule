@@ -1,4 +1,5 @@
-﻿using System;
+﻿using ClinicScheduleModels.Enums;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -10,7 +11,11 @@ namespace ClinicScheduleModels.Models
     {
         int scheduleId { get; }
         int shiftId { get; }
-        IUserModel user { get; }
+
+        int staffId { get; }         // ID назначенного сотрудника (Doctor или Nurse)
+        Roles role { get; }          // Роль назначенного сотрудника
+
+        IUserModel? user { get; }    // Связанная сущность пользователя (может быть null или реализована через логику)
     }
 
 }

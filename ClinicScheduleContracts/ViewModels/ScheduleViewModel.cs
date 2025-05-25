@@ -19,7 +19,9 @@ namespace ClinicScheduleContracts.ViewModels
         [DisplayName("ID отделения")]
         public int departmentId { get; set; }
 
-        public List<IShiftModel> shifts { get; set; } = new();
+        public List<ShiftViewModel> shiftViews { get; set; } = new();
+
+        public List<IShiftModel> shifts => shiftViews.Cast<IShiftModel>().ToList();
 
         public Dictionary<int, List<IDoctorModel>> shiftDoctors { get; set; } = new();
 

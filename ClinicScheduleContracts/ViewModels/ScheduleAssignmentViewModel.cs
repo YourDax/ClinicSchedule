@@ -1,4 +1,5 @@
-﻿using ClinicScheduleModels.Models;
+﻿using ClinicScheduleModels.Enums;
+using ClinicScheduleModels.Models;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -18,7 +19,11 @@ namespace ClinicScheduleContracts.ViewModels
         [DisplayName("ID смены")]
         public int shiftId { get; set; }
 
-        [DisplayName("Пользователь")]
-        public IUserModel user { get; set; }
+        [DisplayName("ID рабочего")]
+        public int staffId { get; set; }
+        public Roles role { get; set; }
+
+        // Этот метод можно реализовать в логике, подгружая нужного пользователя по role и staffId
+        IUserModel IScheduleAssignmentModel.user => throw new NotImplementedException();
     }
 }
