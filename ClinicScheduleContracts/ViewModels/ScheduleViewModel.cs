@@ -26,6 +26,8 @@ namespace ClinicScheduleContracts.ViewModels
         public Dictionary<int, List<IDoctorModel>> shiftDoctors { get; set; } = new();
 
         public Dictionary<int, List<INurseModel>> shiftNurses { get; set; } = new();
+
+        public List<ScheduleAssignmentViewModel> assignments { get; set; } = new();
     }
 
 }

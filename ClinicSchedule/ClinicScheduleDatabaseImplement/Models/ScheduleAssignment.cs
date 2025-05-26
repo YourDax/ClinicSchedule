@@ -16,21 +16,17 @@ namespace ClinicScheduleDatabaseImplement.Models
         [Required]
         public int shiftId { get; set; }
 
+        // ID сотрудника из таблицы Doctor или Nurse или User
         [Required]
-        public int staffId { get; set; } // ID из Doctor или Nurse
+        public int staffId { get; set; }
 
+        // Роль определяет из какой таблицы брать данные
         [Required]
-        public Roles role { get; set; } // Nurse или Doctor
+        public Roles role { get; set; }
 
-        // Реализация свойства интерфейса
-        public IUserModel? user
-        {
-            get
-            {
-                // Здесь вернуть null или реализовать логику загрузки пользователя
-                return null;
-            }
-        }
+        // Интерфейсное свойство — возвращает null.
+        // Реальное разрешение должно происходить в сервисе.
+        public IUserModel? user => null;
 
         public static ScheduleAssignment? Create(ScheduleAssignmentBindingModel model)
         {
@@ -63,5 +59,4 @@ namespace ClinicScheduleDatabaseImplement.Models
             role = role
         };
     }
-
 }

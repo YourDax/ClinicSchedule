@@ -15,6 +15,7 @@ namespace ClinicScheduleContracts.BindingModels
         public List<IShiftModel> shifts { get; set; } = new();
         public Dictionary<int, List<IDoctorModel>> shiftDoctors { get; set; } = new();
         public Dictionary<int, List<INurseModel>> shiftNurses { get; set; } = new();
+        public List<ScheduleAssignmentBindingModel> assignments { get; set; } = new();
     }
 
 }
