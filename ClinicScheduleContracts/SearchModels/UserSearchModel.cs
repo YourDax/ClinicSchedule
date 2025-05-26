@@ -9,14 +9,14 @@ namespace ClinicScheduleContracts.SearchModels
 {
     public class UserSearchModel
     {
-        public int? Id { get; set; }
+        public int? id { get; set; }
 
-        public string? Login { get; set; }
+        public string? login { get; set; }
 
-        public Roles? Role { get; set; }
+        public Roles? role { get; set; }
 
-        public string? Fullname { get; set; }
+        public string? fullname { get; set; }
 
-        public string? PhoneNumber { get; set; }
+        public string? phoneNumber { get; set; }
     }
 }
