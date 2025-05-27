@@ -338,6 +338,8 @@ namespace ClinicScheduleBusinessLogic.BusinessLogic
                 _scheduleStorage.Update(new ScheduleBindingModel
                 {
                     id = newSchedule.id,
+                    date = date,
+                    departmentId = departmentId,
                     assignments = assignments
                 });
 

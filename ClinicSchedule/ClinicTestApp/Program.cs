@@ -5,6 +5,7 @@ using ClinicScheduleBusinessLogic.BusinessLogic;
 using ClinicScheduleContracts.BindingModels;
 using ClinicScheduleContracts.BusinesLogicContracts;
 using ClinicScheduleContracts.BusinessLogicContracts;
+using ClinicScheduleContracts.SearchModels;
 using ClinicScheduleContracts.StorageContracts;
 using ClinicScheduleDatabaseImplement.Implements;
 using ClinicScheduleModels.Enums;
@@ -87,10 +88,10 @@ namespace ClinicScheduleConsoleApp
             {
                 for (int i = 1; i <= 10; i++)
                 {
-                    var doctorLogin = $"doc{dep.id}_{i}";
-                    if (doctorLogic.ReadList(new() { login = doctorLogin })?.Count == 0)
+                    var doctorFullName = $"Доктор {dep.name} #{i}";
+                    if (doctorLogic.ReadList(new() { fullname = doctorFullName })?.Count == 0)
                     {
-                        var doctorFullName = $"Доктор {dep.name} #{i}";
+                        var doctorLogin = $"doc{dep.id}_{i}";
                         doctorLogic.Create(new DoctorBindingModel
                         {
                             fullname = doctorFullName,
@@ -106,13 +107,13 @@ namespace ClinicScheduleConsoleApp
                     }
                     else
                     {
-                        Console.WriteLine($"Доктор с логином {doctorLogin} уже существует");
+                        Console.WriteLine($"Доктор с именем {doctorFullName} уже существует");
                     }
 
-                    var nurseLogin = $"nurse{dep.id}_{i}";
-                    if (nurseLogic.ReadList(new() { login = nurseLogin })?.Count == 0)
+                    var nurseFullName = $"Медсестра {dep.name} #{i}";
+                    if (nurseLogic.ReadList(new() { fullname = nurseFullName })?.Count == 0)
                     {
-                        var nurseFullName = $"Медсестра {dep.name} #{i}";
+                        var nurseLogin = $"nurse{dep.id}_{i}";
                         nurseLogic.Create(new NurseBindingModel
                         {
                             fullname = nurseFullName,
@@ -128,10 +129,11 @@ namespace ClinicScheduleConsoleApp
                     }
                     else
                     {
-                        Console.WriteLine($"Медсестра с логином {nurseLogin} уже существует");
+                        Console.WriteLine($"Медсестра с именем {nurseFullName} уже существует");
                     }
                 }
             }
+
 
 
             // Создаем 2 смены для каждого департамента (8:00-16:00 и 16:00-24:00)
@@ -214,6 +216,78 @@ namespace ClinicScheduleConsoleApp
 
             var generated = scheduleLogic.GenerateSchedule(secondDep.id, autoScheduleDates);
             Console.WriteLine(generated ? $"Автоматическое расписание для {secondDep.name} создано на даты {string.Join(", ", autoScheduleDates)}" : "Ошибка генерации расписания");
+            if (generated)
+            {
+                var schedules = scheduleLogic.ReadList(new() { departmentId = secondDep.id })
+                                 ?.Where(s => autoScheduleDates.Contains(s.date.Date))
+                                 .ToList();
+
+                if (schedules != null && schedules.Count > 0)
+                {
+                    Console.WriteLine($"Расписания для {secondDep.name}:");
+
+                    var doctorStorage = serviceProvider.GetRequiredService<IDoctorStorage>();
+                    var nurseStorage = serviceProvider.GetRequiredService<INurseStorage>();
+                    var shiftStorage = serviceProvider.GetRequiredService<IShiftStorage>();
+
+                    foreach (var schedule in schedules)
+                    {
+                        Console.WriteLine($"\nРасписание на {schedule.date:dd.MM.yyyy} для департамента {secondDep.name}");
+
+                        var assignments = schedule.assignments;
+
+                        if (assignments == null || assignments.Count == 0)
+                        {
+                            Console.WriteLine("  Назначений нет");
+                            continue;
+                        }
+
+                        // Группируем по shiftId
+                        var groupedByShift = assignments
+                            .GroupBy(a => a.shiftId)
+                            .ToList();
+
+                        foreach (var group in groupedByShift)
+                        {
+                            var shift = shiftStorage.GetElement(new ShiftSearchModel { id = group.Key });
+
+                            if (shift == null)
+                            {
+                                Console.WriteLine($"  Не найдена смена с id {group.Key}");
+                                continue;
+                            }
+
+                            Console.WriteLine($"  Смена: {shift.startTime:HH:mm} - {shift.endTime:HH:mm} (Врачей: {shift.requiredDoctors}, Медсестер: {shift.requiredNurses})");
+
+                            foreach (var assignment in group)
+                            {
+                                string staffName = "Неизвестен";
+
+                                if (assignment.role == Roles.Doctor)
+                                {
+                                    var doctor = doctorStorage.GetElement(new DoctorSearchModel { id = assignment.staffId });
+                                    if (doctor != null) staffName = doctor.fullname;
+                                }
+                                else if (assignment.role == Roles.Nurse)
+                                {
+                                    var nurse = nurseStorage.GetElement(new NurseSearchModel { id = assignment.staffId });
+                                    if (nurse != null) staffName = nurse.fullname;
+                                }
+
+                                var roleStr = assignment.role == Roles.Doctor ? "Врач" : "Медсестра";
+
+                                Console.WriteLine($"    {roleStr}: {staffName}");
+                            }
+                        }
+                    }
+                }
+                else
+                {
+                    Console.WriteLine("Расписания не найдены.");
+                }
+            }
+
+
 
             Console.WriteLine("Тестирование завершено.");
         }

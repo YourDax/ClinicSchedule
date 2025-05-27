@@ -13,7 +13,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace ClinicScheduleDatabaseImplement.Migrations
 {
     [DbContext(typeof(ClinicScheduleDatabase))]
-    [Migration("20250526152828_InitialCreate")]
+    [Migration("20250527162150_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
