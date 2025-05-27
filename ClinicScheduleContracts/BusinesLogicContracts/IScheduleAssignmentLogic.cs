@@ -1,19 +1,29 @@
 ﻿using ClinicScheduleContracts.BindingModels;
 using ClinicScheduleContracts.SearchModels;
 using ClinicScheduleContracts.ViewModels;
-using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
-namespace ClinicScheduleContracts.BusinesLogicContracts
+namespace ClinicScheduleContracts.BusinessLogicContracts
 {
     public interface IScheduleAssignmentLogic
     {
-        List<ScheduleAssignmentViewModel>? ReadList(ScheduleAssignmentSearchModel? searchModel);
-        ScheduleAssignmentViewModel? ReadElement(ScheduleAssignmentSearchModel searchModel);
-        bool Create(ScheduleAssignmentBindingModel model);
-        bool Delete(ScheduleAssignmentBindingModel model);
+        List<ScheduleAssignmentViewModel>? ReadList(ScheduleAssignmentSearchModel? model);
+        ScheduleAssignmentViewModel? ReadElement(ScheduleAssignmentSearchModel model);
+
+        /// <summary>
+        /// Добавляет назначение и обновляет отработанные часы у сотрудника.
+        /// </summary>
+        /// <param name="model">Модель назначения.</param>
+        /// <param name="shiftDurationHours">Длительность смены в часах.</param>
+        /// <returns>True при успешном добавлении, иначе false.</returns>
+        bool AddAssignment(ScheduleAssignmentBindingModel model, double shiftDurationHours);
+
+        /// <summary>
+        /// Удаляет назначение и корректирует отработанные часы у сотрудника.
+        /// </summary>
+        /// <param name="model">Модель назначения с id для удаления.</param>
+        /// <param name="shiftDurationHours">Длительность смены в часах.</param>
+        /// <returns>True при успешном удалении, иначе false.</returns>
+        bool RemoveAssignment(ScheduleAssignmentBindingModel model, double shiftDurationHours);
     }
 }

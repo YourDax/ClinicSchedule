@@ -9,6 +9,7 @@ namespace ClinicScheduleContracts.SearchModels
     public class NurseSearchModel
     {
         public int? id { get; set; }
+        public string? login { get; set; }
         public string? fullname { get; set; }
         public string? specialization { get; set; }
         public int? departmentId { get; set; }

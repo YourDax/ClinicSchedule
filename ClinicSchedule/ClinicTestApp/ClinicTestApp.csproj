@@ -15,7 +15,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\ClinicScheduleContracts\ClinicScheduleContracts.csproj" />
+    <ProjectReference Include="..\ClinicScheduleBusinesLogic\ClinicScheduleBusinesLogic.csproj" />
     <ProjectReference Include="..\ClinicScheduleDatabaseImplement\ClinicScheduleDatabaseImplement.csproj" />
+    <ProjectReference Include="..\ClinicScheduleModels\ClinicScheduleModels.csproj" />
+    <ProjectReference Include="..\ClinicScheduleRestApi\ClinicScheduleRestApi.csproj" />
   </ItemGroup>
 
 </Project>
