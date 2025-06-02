@@ -192,8 +192,8 @@ namespace ClinicScheduleBusinessLogic.BusinessLogic
 
             var shiftsTemplate = new[]
             {
-                new { StartHour = 8, EndHour = 16, RequiredDoctors = 2, RequiredNurses = 1 },
-                new { StartHour = 16, EndHour = 24, RequiredDoctors = 2, RequiredNurses = 1 }
+                new { StartHour = 8, EndHour = 16, RequiredDoctors = 2, RequiredNurses = 4 },
+                new { StartHour = 16, EndHour = 24, RequiredDoctors = 2, RequiredNurses = 4 }
             };
 
             foreach (var date in dates)
@@ -247,11 +247,19 @@ namespace ClinicScheduleBusinessLogic.BusinessLogic
 
                 var assignments = new List<ScheduleAssignmentBindingModel>();
 
+                // Для отслеживания занятых сотрудников на дату
+                var assignedDoctorIds = new HashSet<int>();
+                var assignedNurseIds = new HashSet<int>();
+
                 foreach (var shift in shifts)
                 {
-                    // Доктора на смену
-                    var doctorsForShift = doctors.Take(shift.requiredDoctors).ToList();
-                    foreach (var doc in doctorsForShift)
+                    // ДОКТОРА на смену
+                    var availableDoctors = doctors
+                        .Where(d => !assignedDoctorIds.Contains(d.id))
+                        .Take(shift.requiredDoctors)
+                        .ToList();
+
+                    foreach (var doc in availableDoctors)
                     {
                         assignments.Add(new ScheduleAssignmentBindingModel
                         {
@@ -260,8 +268,9 @@ namespace ClinicScheduleBusinessLogic.BusinessLogic
                             role = Roles.Doctor
                         });
 
-                        // Увеличиваем отработанные часы
+                        assignedDoctorIds.Add(doc.id); // помечаем как занятого
                         doc.workedHours += shift.durationHours;
+
                         var doctorFromDb = _doctorStorage.GetElement(new DoctorSearchModel { id = doc.id });
                         if (doctorFromDb != null)
                         {
@@ -279,12 +288,15 @@ namespace ClinicScheduleBusinessLogic.BusinessLogic
                                 workedHours = doc.workedHours
                             });
                         }
-
                     }
 
-                    // Медсестры на смену
-                    var nursesForShift = nurses.Take(shift.requiredNurses).ToList();
-                    foreach (var nurse in nursesForShift)
+                    // МЕДСЁСТРЫ на смену
+                    var availableNurses = nurses
+                        .Where(n => !assignedNurseIds.Contains(n.id))
+                        .Take(shift.requiredNurses)
+                        .ToList();
+
+                    foreach (var nurse in availableNurses)
                     {
                         assignments.Add(new ScheduleAssignmentBindingModel
                         {
@@ -293,8 +305,9 @@ namespace ClinicScheduleBusinessLogic.BusinessLogic
                             role = Roles.Nurse
                         });
 
-                        // Увеличиваем отработанные часы
+                        assignedNurseIds.Add(nurse.id); // помечаем как занятую
                         nurse.workedHours += shift.durationHours;
+
                         var nurseFromDb = _nurseStorage.GetElement(new NurseSearchModel { id = nurse.id });
                         if (nurseFromDb != null)
                         {
@@ -311,9 +324,9 @@ namespace ClinicScheduleBusinessLogic.BusinessLogic
                                 workedHours = nurse.workedHours
                             });
                         }
-
                     }
                 }
+
 
                 // Создаём расписание без назначений
                 var newSchedule = _scheduleStorage.Insert(new ScheduleBindingModel
