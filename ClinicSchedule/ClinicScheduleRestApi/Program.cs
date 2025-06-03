@@ -1,4 +1,5 @@
 using ClinicScheduleBusinessLogic.BusinessLogic;
+using ClinicScheduleBusinessLogic.Logic;
 using ClinicScheduleContracts.BindingModels;
 using ClinicScheduleContracts.BusinesLogicContracts;
 using ClinicScheduleContracts.BusinessLogicContracts;
@@ -14,13 +15,16 @@ builder.Logging.SetMinimumLevel(LogLevel.Trace);
 builder.Services.AddTransient<IDepartmentStorage, DepartmentStorage>();
 builder.Services.AddTransient<IDoctorStorage, DoctorStorage>();
 builder.Services.AddTransient<INurseStorage, NurseStorage>();
+builder.Services.AddTransient<IUserStorage, UserStorage>();
 builder.Services.AddTransient<IShiftStorage, ShiftStorage>();
 builder.Services.AddTransient<IScheduleStorage, ScheduleStorage>();
+
 
 // Подключение бизнес-логики
 builder.Services.AddTransient<IDepartmentLogic, DepartmentLogic>();
 builder.Services.AddTransient<IDoctorLogic, DoctorLogic>();
 builder.Services.AddTransient<INurseLogic, NurseLogic>();
+builder.Services.AddTransient<IUserLogic, UserLogic>();
 builder.Services.AddTransient<IShiftLogic, ShiftLogic>();
 builder.Services.AddTransient<IScheduleLogic, ScheduleLogic>();
 

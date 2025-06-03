@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using System.Net.Http.Json;
 using System.Runtime.Intrinsics.Arm;
+using System.Text.Json.Serialization;
+using System.Text;
 using ClinicScheduleBusinessLogic.BusinessLogic;
 using ClinicScheduleContracts.BindingModels;
 using ClinicScheduleContracts.BusinesLogicContracts;
@@ -14,6 +16,7 @@ using ClinicScheduleModels.Enums;
 using ClinicScheduleModels.Models;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
 
 namespace ClinicScheduleConsoleApp
 {
@@ -576,6 +579,43 @@ namespace ClinicScheduleConsoleApp
                 : "Ошибка генерации автоматического расписания");
 
             Console.WriteLine("Тестирование завершено.");
+            string baseUrl = "http://localhost:5167/api/User";
+            Console.WriteLine("Регистрация нового администратора...");
+
+            var registerModel = new
+            {
+                login = "admin_test",
+                password = "1234",
+                fullname = "Test Admin",
+                birthdate = DateTime.Parse("1990-01-01"),
+                phoneNumber = "1234567890",
+                vacationDates = new List<DateTime>(),
+                role = 2, // Admin
+                workedHours = 0.0
+            };
+            var regContent = new StringContent(
+                JsonConvert.SerializeObject(registerModel),
+                Encoding.UTF8,
+                "application/json");
+
+            var regResponse = await client.PostAsync($"{baseUrl}/Register", regContent);
+            Console.WriteLine($"Ответ на регистрацию: {regResponse.StatusCode}");
+
+            Console.WriteLine("Пробуем логин...");
+
+            var loginUrl = $"{baseUrl}/Login?login=admin_test&password=1234";
+            var loginResponse = await client.GetAsync(loginUrl);
+
+            if (loginResponse.IsSuccessStatusCode)
+            {
+                var responseBody = await loginResponse.Content.ReadAsStringAsync();
+                Console.WriteLine("Успешный логин. Ответ:");
+                Console.WriteLine(responseBody);
+            }
+            else
+            {
+                Console.WriteLine($"Ошибка логина: {loginResponse.StatusCode}");
+            }
         }
 
 
