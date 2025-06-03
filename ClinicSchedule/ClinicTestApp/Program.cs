@@ -382,8 +382,7 @@ namespace ClinicScheduleConsoleApp
                             login = $"doc{dep.id}_{i}",
                             password = "pass",
                             birthdate = new DateTime(1980 + i, 1, 1),
-                            phoneNumber = "1234567890",
-                            specialization = "Терапия",
+                            phoneNumber = $"90000000{dep.id:D2}{i:D2}", // уникальный номер
                             experienceYears = 5 + i,
                             departmentId = dep.id
                         };
@@ -419,9 +418,8 @@ namespace ClinicScheduleConsoleApp
                             login = $"nurse{dep.id}_{i}",
                             password = "pass",
                             birthdate = new DateTime(1990 + i, 1, 1),
-                            phoneNumber = "0987654321",
+                            phoneNumber = $"91000000{dep.id:D2}{i:D2}", // уникальный номер
                             specialization = "Общая практика",
-                            experienceYears = 3 + i,
                             departmentId = dep.id
                         };
 

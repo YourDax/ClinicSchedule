@@ -42,8 +42,5 @@ namespace ClinicScheduleContracts.ViewModels
 
         [DisplayName("ID отделения")]
         public int departmentId { get; set; }
-
-        [DisplayName("Специализация")]
-        public string specialization { get; set; } = string.Empty;
     }
 }

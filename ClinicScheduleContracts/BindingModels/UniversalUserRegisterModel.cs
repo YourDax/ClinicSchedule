@@ -22,5 +22,7 @@ namespace ClinicScheduleContracts.BindingModels
 
         // Только для докторов
         public int? experienceYears { get; set; }
+        // Только для медсестер
+        public string specialization {  get; set; } = string.Empty ;
     }
 }

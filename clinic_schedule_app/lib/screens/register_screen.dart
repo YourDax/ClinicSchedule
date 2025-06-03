@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../api/api_client.dart';
+import '../models/NurseSpecialization.dart';
 import '../models/user_model.dart';
+import '../models/department_model.dart';
 import '../providers/user_provider.dart';
+
+// Добавьте enum NurseSpecialization в отдельный файл и импортируйте сюда
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -18,12 +22,36 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _fullnameController = TextEditingController();
   final TextEditingController _phoneController = TextEditingController();
+  final TextEditingController _experienceController = TextEditingController();
 
   DateTime? _birthdate;
   UserRole? _selectedRole;
+  DepartmentModel? _selectedDepartment;
+  NurseSpecialization? _selectedNurseSpecialization;
+
+  List<DepartmentModel> _departments = [];
 
   bool _loading = false;
   String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadDepartments();
+  }
+
+  Future<void> _loadDepartments() async {
+    try {
+      final deps = await ApiClient.getDepartments();
+      setState(() {
+        _departments = deps;
+      });
+    } catch (e) {
+      setState(() {
+        _error = 'Не удалось загрузить департаменты';
+      });
+    }
+  }
 
   Future<void> _pickBirthdate() async {
     final picked = await showDatePicker(
@@ -41,17 +69,34 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   void _submit() async {
     if (!_formKey.currentState!.validate()) return;
+
     if (_birthdate == null) {
-      setState(() {
-        _error = 'Выберите дату рождения';
-      });
+      setState(() => _error = 'Выберите дату рождения');
       return;
     }
+
     if (_selectedRole == null) {
-      setState(() {
-        _error = 'Выберите роль';
-      });
+      setState(() => _error = 'Выберите роль');
       return;
+    }
+
+    if ((_selectedRole == UserRole.nurse || _selectedRole == UserRole.doctor) &&
+        _selectedDepartment == null) {
+      setState(() => _error = 'Выберите департамент');
+      return;
+    }
+
+    if (_selectedRole == UserRole.nurse && _selectedNurseSpecialization == null) {
+      setState(() => _error = 'Выберите специализацию медсестры');
+      return;
+    }
+
+    if (_selectedRole == UserRole.doctor) {
+      final expText = _experienceController.text.trim();
+      if (expText.isEmpty || int.tryParse(expText) == null) {
+        setState(() => _error = 'Введите корректный опыт работы в годах');
+        return;
+      }
     }
 
     setState(() {
@@ -59,7 +104,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
       _error = null;
     });
 
-    // В API пока предполагаем, что регистрируем только основные поля
     try {
       final user = await ApiClient.register(
         _fullnameController.text.trim(),
@@ -68,25 +112,25 @@ class _RegisterScreenState extends State<RegisterScreen> {
         _birthdate!,
         _phoneController.text.trim(),
         _selectedRole!,
+        _selectedDepartment?.id,
+        experienceYears: _selectedRole == UserRole.doctor
+            ? int.parse(_experienceController.text.trim())
+            : null,
+        nurseSpecialization: _selectedRole == UserRole.nurse
+            ? _selectedNurseSpecialization
+            : null,
       );
 
       if (user != null) {
-        // Успешная регистрация — сохранить пользователя в провайдер и перейти на главный экран
         Provider.of<UserProvider>(context, listen: false).setUser(user);
         Navigator.of(context).pushReplacementNamed('/home');
       } else {
-        setState(() {
-          _error = 'Ошибка регистрации';
-        });
+        setState(() => _error = 'Ошибка регистрации');
       }
     } catch (e) {
-      setState(() {
-        _error = 'Ошибка: $e';
-      });
+      setState(() => _error = 'Ошибка: $e');
     } finally {
-      setState(() {
-        _loading = false;
-      });
+      setState(() => _loading = false);
     }
   }
 
@@ -146,11 +190,62 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 onChanged: (role) {
                   setState(() {
                     _selectedRole = role;
+                    _selectedDepartment = null;
+                    _selectedNurseSpecialization = null;
+                    _experienceController.clear();
                   });
                 },
-                validator: (value) =>
-                value == null ? 'Выберите роль' : null,
+                validator: (value) => value == null ? 'Выберите роль' : null,
               ),
+              if (_selectedRole == UserRole.nurse) ...[
+                DropdownButtonFormField<NurseSpecialization>(
+                  value: _selectedNurseSpecialization,
+                  decoration: const InputDecoration(labelText: 'Специализация'),
+                  items: NurseSpecialization.values.map((spec) {
+                    return DropdownMenuItem(
+                      value: spec,
+                      child: Text(spec.displayName),
+                    );
+                  }).toList(),
+                  onChanged: (spec) =>
+                      setState(() => _selectedNurseSpecialization = spec),
+                  validator: (value) =>
+                  value == null ? 'Выберите специализацию' : null,
+                ),
+              ],
+              if (_selectedRole == UserRole.nurse || _selectedRole == UserRole.doctor)
+                DropdownButtonFormField<DepartmentModel>(
+                  value: _selectedDepartment,
+                  decoration: const InputDecoration(labelText: 'Департамент'),
+                  items: _departments.map((dep) {
+                    return DropdownMenuItem(
+                      value: dep,
+                      child: Text(dep.name),
+                    );
+                  }).toList(),
+                  onChanged: (dep) => setState(() => _selectedDepartment = dep),
+                  validator: (value) =>
+                  value == null ? 'Выберите департамент' : null,
+                ),
+              if (_selectedRole == UserRole.doctor) ...[
+                TextFormField(
+                  controller: _experienceController,
+                  decoration:
+                  const InputDecoration(labelText: 'Опыт работы (лет)'),
+                  keyboardType: TextInputType.number,
+                  validator: (value) {
+                    if (_selectedRole == UserRole.doctor) {
+                      if (value == null || value.isEmpty) {
+                        return 'Введите опыт работы';
+                      }
+                      if (int.tryParse(value) == null) {
+                        return 'Введите число';
+                      }
+                    }
+                    return null;
+                  },
+                ),
+              ],
               if (_error != null) ...[
                 const SizedBox(height: 12),
                 Text(_error!, style: const TextStyle(color: Colors.red)),

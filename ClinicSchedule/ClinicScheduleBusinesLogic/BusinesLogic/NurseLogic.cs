@@ -104,9 +104,6 @@ namespace ClinicScheduleBusinessLogic.BusinessLogic
             if (string.IsNullOrEmpty(model.specialization))
                 throw new ArgumentException("Специализация не указана", nameof(model.specialization));
 
-            if (model.experienceYears < 0)
-                throw new ArgumentException("Стаж не может быть отрицательным", nameof(model.experienceYears));
-
             if (model.birthdate > DateTime.Now)
                 throw new ArgumentException("Дата рождения не может быть в будущем", nameof(model.birthdate));
 

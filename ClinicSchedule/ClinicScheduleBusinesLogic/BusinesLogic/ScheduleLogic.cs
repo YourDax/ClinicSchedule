@@ -282,7 +282,6 @@ namespace ClinicScheduleBusinessLogic.BusinessLogic
                                 fullname = doctorFromDb.fullname,
                                 birthdate = doctorFromDb.birthdate,
                                 phoneNumber = doctorFromDb.phoneNumber,
-                                specialization = doctorFromDb.specialization,
                                 experienceYears = doctorFromDb.experienceYears,
                                 departmentId = doctorFromDb.departmentId,
                                 workedHours = doc.workedHours

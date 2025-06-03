@@ -27,16 +27,26 @@ namespace ClinicScheduleDatabaseImplement.Implements
 
         public NurseViewModel? GetElement(NurseSearchModel model)
         {
-            if (!model.id.HasValue)
+            using var context = new ClinicScheduleDatabase();
+
+            var query = context.Nurses.AsQueryable();
+
+            if (model.id.HasValue)
+            {
+                query = query.Where(x => x.id == model.id);
+            }
+            else if (!string.IsNullOrEmpty(model.login) && !string.IsNullOrEmpty(model.password))
+            {
+                query = query.Where(x => x.login == model.login && x.password == model.password);
+            }
+            else
             {
                 return null;
             }
 
-            using var context = new ClinicScheduleDatabase();
-
-            return context.Nurses
-                .FirstOrDefault(x => x.id == model.id)?.GetViewModel;
+            return query.FirstOrDefault()?.GetViewModel;
         }
+
 
         public List<NurseViewModel> GetFilteredList(NurseSearchModel model)
         {

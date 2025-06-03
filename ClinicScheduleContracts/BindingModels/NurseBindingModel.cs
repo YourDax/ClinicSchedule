@@ -20,7 +20,6 @@ namespace ClinicScheduleContracts.BindingModels
         public Roles role => Roles.Nurse;
         public double workedHours { get; set; }
         public string specialization { get; set; }
-        public int experienceYears { get; set; }
         public int departmentId { get; set; }
     }
 

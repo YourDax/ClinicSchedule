@@ -32,5 +32,30 @@ namespace ClinicScheduleDatabaseImplement
         public virtual DbSet<Schedule> Schedules { get; set; }
 
         public virtual DbSet<ScheduleAssignment> ScheduleAssignments { get; set; }
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        {
+            base.OnModelCreating(modelBuilder);
+
+            modelBuilder.Entity<Doctor>(entity =>
+            {
+                entity.HasIndex(e => e.login).IsUnique();
+                entity.HasIndex(e => e.fullname).IsUnique();
+                entity.HasIndex(e => e.phoneNumber).IsUnique();
+            });
+
+            modelBuilder.Entity<Nurse>(entity =>
+            {
+                entity.HasIndex(e => e.login).IsUnique();
+                entity.HasIndex(e => e.fullname).IsUnique();
+                entity.HasIndex(e => e.phoneNumber).IsUnique();
+            });
+
+            modelBuilder.Entity<User>(entity =>
+            {
+                entity.HasIndex(e => e.login).IsUnique();
+                entity.HasIndex(e => e.fullname).IsUnique();
+                entity.HasIndex(e => e.phoneNumber).IsUnique();
+            });
+        }
     }
 }

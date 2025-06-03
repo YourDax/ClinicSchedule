@@ -85,6 +85,15 @@ namespace ClinicScheduleDatabaseImplement.Migrations
 
                     b.HasKey("id");
 
+                    b.HasIndex("fullname")
+                        .IsUnique();
+
+                    b.HasIndex("login")
+                        .IsUnique();
+
+                    b.HasIndex("phoneNumber")
+                        .IsUnique();
+
                     b.ToTable("Doctors");
                 });
 
@@ -133,6 +142,15 @@ namespace ClinicScheduleDatabaseImplement.Migrations
                         .HasColumnType("double precision");
 
                     b.HasKey("id");
+
+                    b.HasIndex("fullname")
+                        .IsUnique();
+
+                    b.HasIndex("login")
+                        .IsUnique();
+
+                    b.HasIndex("phoneNumber")
+                        .IsUnique();
 
                     b.ToTable("Nurses");
                 });
@@ -254,6 +272,15 @@ namespace ClinicScheduleDatabaseImplement.Migrations
                         .HasColumnType("double precision");
 
                     b.HasKey("id");
+
+                    b.HasIndex("fullname")
+                        .IsUnique();
+
+                    b.HasIndex("login")
+                        .IsUnique();
+
+                    b.HasIndex("phoneNumber")
+                        .IsUnique();
 
                     b.ToTable("Users");
                 });

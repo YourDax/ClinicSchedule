@@ -25,41 +25,42 @@ namespace ClinicRestApi.Controllers
             _nurseLogic = nurseLogic;
         }
 
-        [HttpGet]
-        public object? Login(string login, string password)
-
+        [HttpPost]
+        public IActionResult Login([FromBody] LoginRequest request)
         {
             try
             {
-                // Ищем среди докторов
                 var doctor = _doctorLogic.ReadElement(new DoctorSearchModel
                 {
-                    login = login,
-                    password = password
+                    login = request.login,
+                    password = request.password
                 });
-                if (doctor != null) return doctor;
+                if (doctor != null) return Ok(doctor);
 
-                // Среди медсестёр
                 var nurse = _nurseLogic.ReadElement(new NurseSearchModel
                 {
-                    login = login,
-                    password = password
+                    login = request.login,
+                    password = request.password
                 });
-                if (nurse != null) return nurse;
+                if (nurse != null) return Ok(nurse);
 
-                // Среди админов
-                return _userLogic.ReadElement(new UserSearchModel
+                var admin = _userLogic.ReadElement(new UserSearchModel
                 {
-                    login = login,
-                    password = password
+                    login = request.login,
+                    password = request.password
                 });
+                if (admin != null) return Ok(admin);
+
+                return NotFound("Пользователь с такими данными не найден");
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Login error");
-                throw;
+                return StatusCode(500, "Ошибка сервера");
             }
         }
+
+
 
         [HttpPost]
         public void Register([FromBody] UniversalUserRegisterModel model)
@@ -80,6 +81,7 @@ namespace ClinicRestApi.Controllers
                             phoneNumber = model.phoneNumber,
                             vacationDates = model.vacationDates,
                             departmentId = model.departmentId.Value,
+                            specialization = model.specialization,
                             workedHours = 0
                         });
                         break;

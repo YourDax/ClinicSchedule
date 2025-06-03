@@ -135,7 +135,6 @@ namespace ClinicScheduleBusinessLogic.BusinessLogic
                         fullname = doctor.fullname,
                         birthdate = doctor.birthdate,
                         phoneNumber = doctor.phoneNumber,
-                        specialization = doctor.specialization,
                         experienceYears = doctor.experienceYears,
                         departmentId = doctor.departmentId,
                         workedHours = workedHours,

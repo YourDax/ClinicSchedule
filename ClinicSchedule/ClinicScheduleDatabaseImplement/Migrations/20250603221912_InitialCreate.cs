@@ -150,6 +150,42 @@ namespace ClinicScheduleDatabaseImplement.Migrations
                 });
 
             migrationBuilder.CreateIndex(
+                name: "IX_Doctors_fullname",
+                table: "Doctors",
+                column: "fullname",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Doctors_login",
+                table: "Doctors",
+                column: "login",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Doctors_phoneNumber",
+                table: "Doctors",
+                column: "phoneNumber",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Nurses_fullname",
+                table: "Nurses",
+                column: "fullname",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Nurses_login",
+                table: "Nurses",
+                column: "login",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Nurses_phoneNumber",
+                table: "Nurses",
+                column: "phoneNumber",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
                 name: "IX_ScheduleAssignments_scheduleId",
                 table: "ScheduleAssignments",
                 column: "scheduleId");
@@ -158,6 +194,24 @@ namespace ClinicScheduleDatabaseImplement.Migrations
                 name: "IX_Shifts_scheduleId",
                 table: "Shifts",
                 column: "scheduleId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Users_fullname",
+                table: "Users",
+                column: "fullname",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Users_login",
+                table: "Users",
+                column: "login",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Users_phoneNumber",
+                table: "Users",
+                column: "phoneNumber",
+                unique: true);
         }
 
         /// <inheritdoc />

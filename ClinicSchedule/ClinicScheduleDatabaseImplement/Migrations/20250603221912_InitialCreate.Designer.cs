@@ -13,7 +13,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace ClinicScheduleDatabaseImplement.Migrations
 {
     [DbContext(typeof(ClinicScheduleDatabase))]
-    [Migration("20250527162150_InitialCreate")]
+    [Migration("20250603221912_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -88,6 +88,15 @@ namespace ClinicScheduleDatabaseImplement.Migrations
 
                     b.HasKey("id");
 
+                    b.HasIndex("fullname")
+                        .IsUnique();
+
+                    b.HasIndex("login")
+                        .IsUnique();
+
+                    b.HasIndex("phoneNumber")
+                        .IsUnique();
+
                     b.ToTable("Doctors");
                 });
 
@@ -136,6 +145,15 @@ namespace ClinicScheduleDatabaseImplement.Migrations
                         .HasColumnType("double precision");
 
                     b.HasKey("id");
+
+                    b.HasIndex("fullname")
+                        .IsUnique();
+
+                    b.HasIndex("login")
+                        .IsUnique();
+
+                    b.HasIndex("phoneNumber")
+                        .IsUnique();
 
                     b.ToTable("Nurses");
                 });
@@ -257,6 +275,15 @@ namespace ClinicScheduleDatabaseImplement.Migrations
                         .HasColumnType("double precision");
 
                     b.HasKey("id");
+
+                    b.HasIndex("fullname")
+                        .IsUnique();
+
+                    b.HasIndex("login")
+                        .IsUnique();
+
+                    b.HasIndex("phoneNumber")
+                        .IsUnique();
 
                     b.ToTable("Users");
                 });

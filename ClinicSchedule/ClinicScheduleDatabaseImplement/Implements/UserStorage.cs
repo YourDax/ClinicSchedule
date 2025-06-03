@@ -28,12 +28,21 @@ namespace ClinicScheduleDatabaseImplement.Implements
 
         public UserViewModel? GetElement(UserSearchModel model)
         {
-            if (!model.id.HasValue) return null;
-
             using var context = new ClinicScheduleDatabase();
 
-            return context.Users.FirstOrDefault(x => x.id == model.id.Value)?.GetViewModel;
+            if (model.id.HasValue)
+            {
+                return context.Users.FirstOrDefault(x => x.id == model.id.Value)?.GetViewModel;
+            }
+
+            if (!string.IsNullOrEmpty(model.login))
+            {
+                return context.Users.FirstOrDefault(x => x.login.ToLower() == model.login.ToLower())?.GetViewModel;
+            }
+
+            return null;
         }
+
 
         public List<UserViewModel> GetFilteredList(UserSearchModel model)
         {

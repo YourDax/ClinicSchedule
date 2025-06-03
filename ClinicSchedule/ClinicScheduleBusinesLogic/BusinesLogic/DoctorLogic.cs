@@ -101,9 +101,6 @@ namespace ClinicScheduleBusinessLogic.BusinessLogic
             if (string.IsNullOrEmpty(model.fullname))
                 throw new ArgumentException("ФИО доктора не задано", nameof(model.fullname));
 
-            if (string.IsNullOrEmpty(model.specialization))
-                throw new ArgumentException("Специализация не указана", nameof(model.specialization));
-
             if (model.experienceYears < 0)
                 throw new ArgumentException("Стаж не может быть отрицательным", nameof(model.experienceYears));
 

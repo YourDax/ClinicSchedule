@@ -19,5 +19,9 @@ namespace ClinicScheduleContracts.BindingModels
         public List<DateTime> vacationDates { get; set; } = new();
         public Roles role { get; set; }
         public double workedHours { get; set; }
+
+        // Опциональные поля
+        public int? experienceYears { get; set; } // для доктора
+        public string specialization { get; set; } // для медсестры
     }
 }

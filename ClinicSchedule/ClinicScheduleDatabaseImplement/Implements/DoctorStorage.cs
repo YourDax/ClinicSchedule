@@ -27,16 +27,26 @@ namespace ClinicScheduleDatabaseImplement.Implements
 
         public DoctorViewModel? GetElement(DoctorSearchModel model)
         {
-            if (!model.id.HasValue)
-            {
-                return null;
-            }
-
             using var context = new ClinicScheduleDatabase();
 
-            return context.Doctors
-                .FirstOrDefault(x => x.id == model.id)?.GetViewModel;
+            var query = context.Doctors.AsQueryable();
+
+            if (model.id.HasValue)
+            {
+                query = query.Where(x => x.id == model.id);
+            }
+            else if (!string.IsNullOrEmpty(model.login) && !string.IsNullOrEmpty(model.password))
+            {
+                query = query.Where(x => x.login == model.login && x.password == model.password);
+            }
+            else
+            {
+                return null; // недостаточно данных для поиска
+            }
+
+            return query.FirstOrDefault()?.GetViewModel;
         }
+
 
         public List<DoctorViewModel> GetFilteredList(DoctorSearchModel model)
         {
