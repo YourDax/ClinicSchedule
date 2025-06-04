@@ -16,7 +16,7 @@ namespace ClinicScheduleContracts.BusinessLogicContracts
         /// <param name="model">Модель назначения.</param>
         /// <param name="shiftDurationHours">Длительность смены в часах.</param>
         /// <returns>True при успешном добавлении, иначе false.</returns>
-        bool AddAssignment(ScheduleAssignmentBindingModel model, double shiftDurationHours);
+        bool AddAssignment(ScheduleAssignmentBindingModel model);
 
         /// <summary>
         /// Удаляет назначение и корректирует отработанные часы у сотрудника.
@@ -24,6 +24,6 @@ namespace ClinicScheduleContracts.BusinessLogicContracts
         /// <param name="model">Модель назначения с id для удаления.</param>
         /// <param name="shiftDurationHours">Длительность смены в часах.</param>
         /// <returns>True при успешном удалении, иначе false.</returns>
-        bool RemoveAssignment(ScheduleAssignmentBindingModel model, double shiftDurationHours);
+        bool RemoveAssignment(ScheduleAssignmentBindingModel model);
     }
 }

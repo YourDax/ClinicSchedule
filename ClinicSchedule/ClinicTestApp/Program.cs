@@ -564,7 +564,11 @@ namespace ClinicScheduleConsoleApp
                 DateTime.Today.AddDays(2),
                 DateTime.Today.AddDays(3),
                 DateTime.Today.AddDays(4),
-                DateTime.Today.AddDays(5)
+                DateTime.Today.AddDays(5),
+                DateTime.Today.AddDays(6),
+                DateTime.Today.AddDays(7),
+                DateTime.Today.AddDays(8),
+                DateTime.Today.AddDays(9),
             };
 
             foreach (var dep in departments)

@@ -181,9 +181,6 @@ namespace ClinicScheduleBusinessLogic.BusinessLogic
 
             if (model.date == default)
                 throw new ArgumentException("Не указана дата", nameof(model.date));
-
-            if (model.shifts == null || model.shifts.Count == 0)
-                throw new ArgumentException("Не указаны смены", nameof(model.shifts));
         }
         public bool GenerateSchedule(int departmentId, List<DateTime> dates)
         {

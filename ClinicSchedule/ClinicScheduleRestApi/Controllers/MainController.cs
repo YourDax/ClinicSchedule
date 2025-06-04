@@ -7,6 +7,7 @@ using ClinicScheduleContracts.RequestModels;
 using ClinicScheduleContracts.SearchModels;
 using ClinicScheduleContracts.ViewModels;
 using ClinicScheduleModels.Enums;
+using ClinicScheduleModels.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 
@@ -494,6 +495,197 @@ namespace ClinicRestApi.Controllers
             return result;
         }
 
+        [HttpGet]
+        public List<ScheduleViewModel> GetForDepartment(int departmentId, DateTime startDate, DateTime endDate)
+        {
+            var schedules = _schedule.ReadList(new ScheduleSearchModel
+            {
+                departmentId = departmentId,
+                startDateFrom = startDate,
+                startDateTo = endDate
+            });
+
+            var allAssignments = _scheduleAssignment.ReadList(null);
+
+            var result = new List<ScheduleViewModel>();
+
+            foreach (var schedule in schedules)
+            {
+                var scheduleAssignments = allAssignments
+                    .Where(a => a.scheduleId == schedule.id)
+                    .ToList();
+
+                var detailedAssignments = new List<ScheduleAssignmentViewModel>();
+
+                foreach (var assignment in scheduleAssignments)
+                {
+                    string name = "";
+                    if (assignment.role == Roles.Doctor)
+                    {
+                        var doc = _doctor.ReadElement(new DoctorSearchModel { id = assignment.staffId });
+                        name = doc?.fullname ?? "(неизвестный доктор)";
+                    }
+                    else if (assignment.role == Roles.Nurse)
+                    {
+                        var nurse = _nurse.ReadElement(new NurseSearchModel { id = assignment.staffId });
+                        name = nurse?.fullname ?? "(неизвестная медсестра)";
+                    }
+
+                    detailedAssignments.Add(new ScheduleAssignmentViewModel
+                    {
+                        id = assignment.id,
+                        scheduleId = assignment.scheduleId,
+                        shiftId = assignment.shiftId,
+                        staffId = assignment.staffId,
+                        role = assignment.role,
+                        fullName = name
+                    });
+                }
+
+                // Получаем уникальные shiftId из назначений для текущего расписания
+                var uniqueShiftIds = scheduleAssignments
+                    .Select(a => a.shiftId)
+                    .Distinct()
+                    .ToList();
+
+                // Загружаем смены по shiftId
+                var shifts = new List<ShiftViewModel>();
+                foreach (var shiftId in uniqueShiftIds)
+                {
+                    var shift = _shift.ReadElement(new ShiftSearchModel { id = shiftId });
+                    if (shift != null)
+                        shifts.Add(shift);
+                }
+
+                // Считаем суммарное требуемое количество докторов и медсестёр
+                int totalRequiredDoctors = shifts.Any() ? shifts.Max(s => s.requiredDoctors) : 0;
+                int totalRequiredNurses = shifts.Any() ? shifts.Max(s => s.requiredNurses) : 0;
+
+
+                result.Add(new ScheduleViewModel
+                {
+                    id = schedule.id,
+                    date = schedule.date,
+                    departmentId = schedule.departmentId,
+                    assignments = detailedAssignments,
+                    requiredDoctors = totalRequiredDoctors,
+                    requiredNurses = totalRequiredNurses
+                });
+            }
+
+            return result;
+        }
+
+        [HttpGet]
+        public ScheduleViewModel? GetByDateAndDepartment(int departmentId, DateTime date)
+        {
+            var schedules = _schedule.ReadList(new ScheduleSearchModel
+            {
+                departmentId = departmentId,
+                startDateFrom = date,
+                startDateTo = date
+            });
+
+            var schedule = schedules.FirstOrDefault();
+            if (schedule == null)
+                return null;
+
+            var allAssignments = _scheduleAssignment.ReadList(null)
+                .Where(a => a.scheduleId == schedule.id)
+                .ToList();
+
+            var detailedAssignments = new List<ScheduleAssignmentViewModel>();
+
+            foreach (var assignment in allAssignments)
+            {
+                string name = "";
+                if (assignment.role == Roles.Doctor)
+                {
+                    var doc = _doctor.ReadElement(new DoctorSearchModel { id = assignment.staffId });
+                    name = doc?.fullname ?? "(неизвестный доктор)";
+                }
+                else if (assignment.role == Roles.Nurse)
+                {
+                    var nurse = _nurse.ReadElement(new NurseSearchModel { id = assignment.staffId });
+                    name = nurse?.fullname ?? "(неизвестная медсестра)";
+                }
+
+                detailedAssignments.Add(new ScheduleAssignmentViewModel
+                {
+                    id = assignment.id,
+                    scheduleId = assignment.scheduleId,
+                    shiftId = assignment.shiftId,
+                    staffId = assignment.staffId,
+                    role = assignment.role,
+                    fullName = name
+                });
+            }
+
+            var uniqueShiftIds = allAssignments
+                .Select(a => a.shiftId)
+                .Distinct()
+                .ToList();
+
+            var shifts = new List<ShiftViewModel>();
+            foreach (var shiftId in uniqueShiftIds)
+            {
+                var shift = _shift.ReadElement(new ShiftSearchModel { id = shiftId });
+                if (shift != null)
+                    shifts.Add(shift);
+            }
+
+            int totalRequiredDoctors = shifts.Any() ? shifts.Max(s => s.requiredDoctors) : 0;
+            int totalRequiredNurses = shifts.Any() ? shifts.Max(s => s.requiredNurses) : 0;
+
+            return new ScheduleViewModel
+            {
+                id = schedule.id,
+                date = schedule.date,
+                departmentId = schedule.departmentId,
+                assignments = detailedAssignments,
+                requiredDoctors = totalRequiredDoctors,
+                requiredNurses = totalRequiredNurses
+            };
+        }
+
+        [HttpGet]
+        public List<ShiftViewModel> GetShiftsByDateAndDepartment(int departmentId, DateTime date)
+        {
+            var allShifts = _shift.ReadList(new ShiftSearchModel
+            {
+                departmentId = departmentId
+            });
+
+            return allShifts
+                .Where(s => s.startTime.Date == date.Date)
+                .ToList();
+        }
+        [HttpPost]
+        public bool AddAssignment([FromBody] ScheduleAssignmentBindingModel model)
+        {
+            try
+            {
+                return _scheduleAssignment.AddAssignment(model);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error adding schedule assignment");
+                throw;
+            }
+        }
+        [HttpPost]
+        public bool RemoveAssignment([FromBody] ScheduleAssignmentBindingModel model)
+        {
+            try
+            {
+                return _scheduleAssignment.RemoveAssignment(model);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error removing schedule assignment");
+                throw;
+            }
+        }
 
 
 
@@ -510,6 +702,38 @@ namespace ClinicRestApi.Controllers
                 throw;
             }
         }
+        [HttpGet]
+        public List<DoctorViewModel> GetDoctorsByDepartment(int departmentId)
+        {
+            try
+            {
+                var model = new DoctorSearchModel { departmentId = departmentId };
+                var list = _doctor.ReadList(model);
+                return list ?? new List<DoctorViewModel>();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Ошибка получения докторов для departmentId={departmentId}", departmentId);
+                throw;
+            }
+        }
+
+        [HttpGet]
+        public List<NurseViewModel> GetNursesByDepartment(int departmentId)
+        {
+            try
+            {
+                var model = new NurseSearchModel { departmentId = departmentId };
+                var list = _nurse.ReadList(model);
+                return list ?? new List<NurseViewModel>();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Ошибка получения медсестёр для departmentId={departmentId}", departmentId);
+                throw;
+            }
+        }
+
 
     }
 }

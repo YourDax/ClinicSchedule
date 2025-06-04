@@ -18,6 +18,9 @@ namespace ClinicScheduleContracts.ViewModels
 
         [DisplayName("ID отделения")]
         public int departmentId { get; set; }
+        public int requiredDoctors { get; set; }
+        public int requiredNurses { get; set; }
+
 
         public List<ShiftViewModel> shiftViews { get; set; } = new();
 

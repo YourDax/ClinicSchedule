@@ -1,8 +1,10 @@
 ﻿using ClinicScheduleContracts.BindingModels;
+using ClinicScheduleContracts.BusinesLogicContracts;
 using ClinicScheduleContracts.BusinessLogicContracts;
 using ClinicScheduleContracts.SearchModels;
 using ClinicScheduleContracts.StorageContracts;
 using ClinicScheduleContracts.ViewModels;
+using ClinicScheduleDatabaseImplement.Models;
 using ClinicScheduleModels.Enums;
 using Microsoft.Extensions.Logging;
 using System;
@@ -17,17 +19,20 @@ namespace ClinicScheduleBusinessLogic.BusinessLogic
         private readonly IScheduleAssignmentStorage _assignmentStorage;
         private readonly IDoctorStorage _doctorStorage;
         private readonly INurseStorage _nurseStorage;
+        private readonly IShiftLogic _shiftLogic;
 
         public ScheduleAssignmentLogic(
             ILogger<ScheduleAssignmentLogic> logger,
             IScheduleAssignmentStorage assignmentStorage,
             IDoctorStorage doctorStorage,
-            INurseStorage nurseStorage)
+            INurseStorage nurseStorage,
+            IShiftLogic shiftLogic)
         {
             _logger = logger;
             _assignmentStorage = assignmentStorage;
             _doctorStorage = doctorStorage;
             _nurseStorage = nurseStorage;
+            _shiftLogic = shiftLogic;
         }
 
         public List<ScheduleAssignmentViewModel>? ReadList(ScheduleAssignmentSearchModel? model)
@@ -56,7 +61,7 @@ namespace ClinicScheduleBusinessLogic.BusinessLogic
             return element;
         }
 
-        public bool AddAssignment(ScheduleAssignmentBindingModel model, double shiftDurationHours)
+        public bool AddAssignment(ScheduleAssignmentBindingModel model)
         {
             CheckModel(model);
 
@@ -74,6 +79,18 @@ namespace ClinicScheduleBusinessLogic.BusinessLogic
                 return false;
             }
 
+            // Получаем данные о смене, чтобы вычислить длительность
+            var shift = _shiftLogic.ReadElement(new ShiftSearchModel { id = model.shiftId });
+            if (shift == null)
+            {
+                _logger.LogError("Не найдена смена с id = {ShiftId} при добавлении назначения", model.shiftId);
+                throw new Exception($"Смена с id = {model.shiftId} не найдена");
+            }
+
+
+            // Вычисляем длительность смены в часах
+            var shiftDurationHours = (shift.endTime - shift.startTime).TotalHours;
+
             // Добавляем назначение
             var result = _assignmentStorage.Insert(model);
             if (result == null)
@@ -89,13 +106,18 @@ namespace ClinicScheduleBusinessLogic.BusinessLogic
             return true;
         }
 
-        public bool RemoveAssignment(ScheduleAssignmentBindingModel model, double shiftDurationHours)
+
+        public bool RemoveAssignment(ScheduleAssignmentBindingModel model)
         {
             CheckModel(model, false);
 
+            // Ищем назначение по уникальному сочетанию полей shiftId, staffId, role, scheduleId
             var existing = _assignmentStorage.GetFilteredList(new ScheduleAssignmentSearchModel
             {
-                id = model.id
+                shiftId = model.shiftId,
+                staffId = model.staffId,
+                role = model.role,
+                scheduleId = model.scheduleId
             })?.FirstOrDefault();
 
             if (existing == null)
@@ -104,19 +126,32 @@ namespace ClinicScheduleBusinessLogic.BusinessLogic
                 return false;
             }
 
-            var result = _assignmentStorage.Delete(new ScheduleAssignmentBindingModel { id = model.id });
+            // Получаем данные о смене для вычисления длительности
+            var shift = _shiftLogic.ReadElement(new ShiftSearchModel { id = existing.shiftId });
+            if (shift == null)
+            {
+                _logger.LogError("Не найдена смена с id = {ShiftId} при удалении назначения", existing.shiftId);
+                throw new Exception($"Смена с id = {existing.shiftId} не найдена");
+            }
+
+            // Вычисляем длительность смены в часах
+            var shiftDurationHours = (shift.endTime - shift.startTime).TotalHours;
+
+            // Удаляем назначение (используем id из найденного назначения)
+            var result = _assignmentStorage.Delete(new ScheduleAssignmentBindingModel { id = existing.id });
             if (result == null)
             {
                 _logger.LogWarning("RemoveAssignment: Delete failed");
                 return false;
             }
 
-            // Уменьшаем workedHours
+            // Уменьшаем workedHours у доктора или медсестры
             UpdateWorkedHours(existing.staffId, existing.role, shiftDurationHours, addHours: false);
 
             _logger.LogInformation("RemoveAssignment: Assignment removed successfully");
             return true;
         }
+
 
         private void UpdateWorkedHours(int staffId, Roles role, double hours, bool addHours)
         {
