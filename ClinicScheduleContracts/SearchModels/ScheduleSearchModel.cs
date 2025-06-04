@@ -11,6 +11,8 @@ namespace ClinicScheduleContracts.SearchModels
         public int? id { get; set; }
         public int? departmentId { get; set; }
         public DateTime? date { get; set; }
+        public DateTime? startDateFrom { get; set; }
+        public DateTime? startDateTo { get; set; }
     }
 
 }

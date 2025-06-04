@@ -18,6 +18,7 @@ builder.Services.AddTransient<INurseStorage, NurseStorage>();
 builder.Services.AddTransient<IUserStorage, UserStorage>();
 builder.Services.AddTransient<IShiftStorage, ShiftStorage>();
 builder.Services.AddTransient<IScheduleStorage, ScheduleStorage>();
+builder.Services.AddTransient<IScheduleAssignmentStorage, ScheduleAssignmentStorage>();
 
 
 // Подключение бизнес-логики
@@ -27,6 +28,7 @@ builder.Services.AddTransient<INurseLogic, NurseLogic>();
 builder.Services.AddTransient<IUserLogic, UserLogic>();
 builder.Services.AddTransient<IShiftLogic, ShiftLogic>();
 builder.Services.AddTransient<IScheduleLogic, ScheduleLogic>();
+builder.Services.AddTransient<IScheduleAssignmentLogic, ScheduleAssignmentLogic>();
 
 builder.Services.AddControllers();
 

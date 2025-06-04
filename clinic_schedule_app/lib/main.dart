@@ -1,3 +1,4 @@
+import 'package:clinic_schedule_app/screens/main_screen.dart';
 import 'package:clinic_schedule_app/screens/welcomeScreen.dart';
 import 'package:flutter/material.dart';
 import 'providers/user_provider.dart';
@@ -15,9 +16,16 @@ class ClinicApp extends StatelessWidget {
     return ChangeNotifierProvider(
       create: (_) => UserProvider(),
       child: MaterialApp(
-        title: 'Клиника',
-        theme: ThemeData(primarySwatch: Colors.blue),
-        home: const WelcomeScreen(),
+        title: 'Clinic App',
+        theme: ThemeData(
+          useMaterial3: true,
+          colorSchemeSeed: Colors.teal,
+        ),
+        initialRoute: '/',
+        routes: {
+          '/': (context) => WelcomeScreen(),
+          '/home': (context) => MainScreen(),
+        },
       ),
     );
   }

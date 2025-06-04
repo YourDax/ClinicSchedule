@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../models/NurseSpecialization.dart';
+import '../models/ScheduleCell.dart';
 import '../models/department_model.dart';
 import '../models/user_model.dart';
 
@@ -101,4 +102,32 @@ class ApiClient {
 
     return null;
   }
+  static Future<List<ScheduleCell>> getScheduleForUser({
+    required int userId,
+    required DateTime startDate,
+    required DateTime endDate,
+  }) async {
+    final url = Uri.parse(
+      '$baseUrl/Main/GetForUser?userId=$userId&startDate=${startDate.toIso8601String()}&endDate=${endDate.toIso8601String()}',
+    );
+
+    print('\n==== API GET SCHEDULE FOR USER ====');
+    print('GET $url');
+
+    final response = await http.get(url);
+
+    print('Response status code: ${response.statusCode}');
+    print('Response headers: ${response.headers}');
+    print('Response body: ${response.body}');
+    print('===================================\n');
+
+    if (response.statusCode == 200) {
+      final List data = jsonDecode(response.body);
+      return data.map((e) => ScheduleCell.fromJson(e)).toList();
+    } else {
+      throw Exception('Не удалось загрузить расписание (код ${response.statusCode})');
+    }
+  }
+
+
 }

@@ -558,23 +558,28 @@ namespace ClinicScheduleConsoleApp
 
 
             // === Автоматическое расписание ===
-            var secondDep = departments[1];
             var autoDates = new List<DateTime>
             {
                 DateTime.Today.AddDays(1),
                 DateTime.Today.AddDays(2),
-                DateTime.Today.AddDays(3)
+                DateTime.Today.AddDays(3),
+                DateTime.Today.AddDays(4),
+                DateTime.Today.AddDays(5)
             };
 
-            var generateResponse = await client.PostAsJsonAsync("GenerateSchedule", new
+            foreach (var dep in departments)
             {
-                departmentId = secondDep.id,
-                dates = autoDates
-            });
+                var generateResponse = await client.PostAsJsonAsync("GenerateSchedule", new
+                {
+                    departmentId = dep.id,
+                    dates = autoDates
+                });
 
-            Console.WriteLine(generateResponse.IsSuccessStatusCode
-                ? $"Автоматическое расписание для {secondDep.name} успешно создано"
-                : "Ошибка генерации автоматического расписания");
+                Console.WriteLine(generateResponse.IsSuccessStatusCode
+                    ? $"Автоматическое расписание для {dep.name} успешно создано"
+                    : $"Ошибка генерации автоматического расписания для {dep.name}");
+            }
+
 
             Console.WriteLine("Тестирование завершено.");
             string baseUrl = "http://localhost:5167/api/User";

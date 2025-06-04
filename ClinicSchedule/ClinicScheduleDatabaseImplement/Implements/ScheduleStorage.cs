@@ -86,22 +86,21 @@ namespace ClinicScheduleDatabaseImplement.Implements
         public List<ScheduleViewModel> GetFilteredList(ScheduleSearchModel model)
         {
             using var context = new ClinicScheduleDatabase();
-            var query = context.Schedules
-                .Include(x => x.shiftEntities)
-                .Include(x => x.assignments)
-                .AsQueryable();
-
-            if (model.departmentId.HasValue)
-            {
-                query = query.Where(x => x.departmentId == model.departmentId.Value);
-            }
-
-            if (model.date.HasValue)
-            {
-                query = query.Where(x => x.date == model.date.Value);
-            }
-
-            return query.ToList().Select(x => x.GetViewModel).ToList();
+            return context.Schedules
+                .Where(s =>
+                    (!model.id.HasValue || s.id == model.id) &&
+                    (!model.departmentId.HasValue || s.departmentId == model.departmentId) &&
+                    (!model.date.HasValue || s.date == model.date) &&
+                    (!model.startDateFrom.HasValue || s.date >= model.startDateFrom.Value) &&
+                    (!model.startDateTo.HasValue || s.date <= model.startDateTo.Value))
+                .Select(s => new ScheduleViewModel
+                {
+                    id = s.id,
+                    departmentId = s.departmentId,
+                    date = s.date
+                })
+                .ToList();
         }
+
     }
 }

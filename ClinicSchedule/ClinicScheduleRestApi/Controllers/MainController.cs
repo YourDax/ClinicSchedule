@@ -1,4 +1,6 @@
-﻿using ClinicScheduleContracts.BindingModels;
+﻿using ClinicScheduleBusinessLogic.BusinessLogic;
+using ClinicScheduleBusinessLogic.Logic;
+using ClinicScheduleContracts.BindingModels;
 using ClinicScheduleContracts.BusinesLogicContracts;
 using ClinicScheduleContracts.BusinessLogicContracts;
 using ClinicScheduleContracts.RequestModels;
@@ -19,9 +21,11 @@ namespace ClinicRestApi.Controllers
         private readonly INurseLogic _nurse;
         private readonly IShiftLogic _shift;
         private readonly IScheduleLogic _schedule;
+        private readonly IScheduleAssignmentLogic _scheduleAssignment;
+        private readonly IUserLogic _user;
 
         public MainController(ILogger<MainController> logger, IDepartmentLogic department, IDoctorLogic doctor,
-            INurseLogic nurse, IShiftLogic shift, IScheduleLogic schedule)
+            INurseLogic nurse, IShiftLogic shift, IScheduleLogic schedule, IUserLogic user, IScheduleAssignmentLogic scheduleAssignment)
         {
             _logger = logger;
             _department = department;
@@ -29,6 +33,8 @@ namespace ClinicRestApi.Controllers
             _nurse = nurse;
             _shift = shift;
             _schedule = schedule;
+            _user = user;
+            _scheduleAssignment = scheduleAssignment;
         }
         /// <summary>
         /// Doctors
@@ -387,6 +393,69 @@ namespace ClinicRestApi.Controllers
                 throw;
             }
         }
+        [HttpGet]
+        public List<ScheduleViewModel> GetForUser(int id, DateTime startDate, DateTime endDate)
+        {
+            var user = _user.ReadElement(new UserSearchModel { id = id });
+            if (user == null)
+            {
+                return new List<ScheduleViewModel>();
+            }
+
+            // Получаем doctorId или nurseId
+            var doctor = _doctor.ReadElement(new DoctorSearchModel { id = id });
+            var nurse = _nurse.ReadElement(new NurseSearchModel { id = id });
+
+            var doctorId = doctor?.id;
+            var nurseId = nurse?.id;
+
+            // Получаем все расписания в заданном диапазоне
+            var schedules = _schedule.ReadList(new ScheduleSearchModel
+            {
+                startDateFrom = startDate,
+                startDateTo = endDate
+            });
+
+            // Получаем все назначения
+            var assignments = _scheduleAssignment.ReadList(null);
+
+            // Фильтруем назначения, относящиеся к этому пользователю
+            var userAssignments = assignments
+                .Where(x => (doctorId.HasValue && x.staffId == doctorId) ||
+                            (nurseId.HasValue && x.staffId == nurseId))
+                .ToList();
+
+            // Собираем расписания с назначениями, в которых участвует пользователь
+            var result = new List<ScheduleViewModel>();
+            foreach (var schedule in schedules)
+            {
+                // Выбираем только те назначения, которые соответствуют текущему расписанию
+                var scheduleAssignments = userAssignments
+                    .Where(a => a.scheduleId == schedule.id)
+                    .ToList();
+
+                if (scheduleAssignments.Count == 0)
+                    continue;
+
+                result.Add(new ScheduleViewModel
+                {
+                    id = schedule.id,
+                    date = schedule.date,
+                    departmentId = schedule.departmentId,
+                    assignments = scheduleAssignments.Select(a => new ScheduleAssignmentViewModel
+                    {
+                        id = a.id,
+                        scheduleId = a.scheduleId,
+                        shiftId = a.shiftId,
+                        staffId = a.staffId,
+                        role = a.role
+                    }).ToList()
+                });
+            }
+
+            return result;
+        }
+
 
         [HttpPost]
         public bool GenerateSchedule([FromBody] GenerateScheduleRequest request)
