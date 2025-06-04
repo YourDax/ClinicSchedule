@@ -22,6 +22,8 @@ namespace ClinicScheduleContracts.ViewModels
         [DisplayName("ID рабочего")]
         public int staffId { get; set; }
         public Roles role { get; set; }
+        public string fullName { get; set; }
+        public string roleName => role == Roles.Doctor ? "Доктор" : "Медсестра";
 
         // Этот метод можно реализовать в логике, подгружая нужного пользователя по role и staffId
         IUserModel IScheduleAssignmentModel.user => throw new NotImplementedException();

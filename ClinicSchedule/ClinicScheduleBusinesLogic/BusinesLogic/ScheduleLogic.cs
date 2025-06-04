@@ -192,9 +192,9 @@ namespace ClinicScheduleBusinessLogic.BusinessLogic
 
             var shiftsTemplate = new[]
             {
-                new { StartHour = 8, EndHour = 16, RequiredDoctors = 2, RequiredNurses = 4 },
-                new { StartHour = 16, EndHour = 24, RequiredDoctors = 2, RequiredNurses = 4 }
-            };
+        new { StartHour = 8, EndHour = 16, RequiredDoctors = 2, RequiredNurses = 4 },
+        new { StartHour = 16, EndHour = 24, RequiredDoctors = 2, RequiredNurses = 4 }
+    };
 
             foreach (var date in dates)
             {
@@ -230,11 +230,24 @@ namespace ClinicScheduleBusinessLogic.BusinessLogic
                     }
                 }
 
-                // Обновим список смен после возможных добавлений
+                // Создаём расписание без назначений
+                var newSchedule = _scheduleStorage.Insert(new ScheduleBindingModel
+                {
+                    date = date,
+                    departmentId = departmentId
+                });
+
+                if (newSchedule == null)
+                {
+                    _logger.LogWarning($"Не удалось создать расписание на {date:dd.MM.yyyy} для департамента {departmentId}");
+                    continue;
+                }
+
+                // Получаем смены после вставки
                 var shifts = _shiftStorage.GetFilteredList(new() { departmentId = departmentId })
                              .Where(s => s.startTime.Date == date.Date).ToList();
 
-                // Выбираем доступных докторов и медсестер, исключая тех, кто в отпуске на эту дату
+                // Фильтруем только докторов и медсестёр нужного департамента
                 var doctors = _doctorStorage.GetFilteredList(new() { departmentId = departmentId })
                     .Where(d => d.vacationDates == null || !d.vacationDates.Contains(date.Date))
                     .OrderBy(d => d.workedHours)
@@ -246,29 +259,32 @@ namespace ClinicScheduleBusinessLogic.BusinessLogic
                     .ToList();
 
                 var assignments = new List<ScheduleAssignmentBindingModel>();
-
-                // Для отслеживания занятых сотрудников на дату
                 var assignedDoctorIds = new HashSet<int>();
                 var assignedNurseIds = new HashSet<int>();
 
                 foreach (var shift in shifts)
                 {
-                    // ДОКТОРА на смену
                     var availableDoctors = doctors
                         .Where(d => !assignedDoctorIds.Contains(d.id))
                         .Take(shift.requiredDoctors)
                         .ToList();
 
+                    if (availableDoctors.Count < shift.requiredDoctors)
+                    {
+                        _logger.LogWarning($"Недостаточно докторов на смену {shift.id} ({shift.startTime:HH:mm}-{shift.endTime:HH:mm}) {date:dd.MM.yyyy}: нужно {shift.requiredDoctors}, доступно {availableDoctors.Count}");
+                    }
+
                     foreach (var doc in availableDoctors)
                     {
                         assignments.Add(new ScheduleAssignmentBindingModel
                         {
+                            scheduleId = newSchedule.id,
                             shiftId = shift.id,
                             staffId = doc.id,
                             role = Roles.Doctor
                         });
 
-                        assignedDoctorIds.Add(doc.id); // помечаем как занятого
+                        assignedDoctorIds.Add(doc.id);
                         doc.workedHours += shift.durationHours;
 
                         var doctorFromDb = _doctorStorage.GetElement(new DoctorSearchModel { id = doc.id });
@@ -289,22 +305,27 @@ namespace ClinicScheduleBusinessLogic.BusinessLogic
                         }
                     }
 
-                    // МЕДСЁСТРЫ на смену
                     var availableNurses = nurses
                         .Where(n => !assignedNurseIds.Contains(n.id))
                         .Take(shift.requiredNurses)
                         .ToList();
 
+                    if (availableNurses.Count < shift.requiredNurses)
+                    {
+                        _logger.LogWarning($"Недостаточно медсестёр на смену {shift.id} ({shift.startTime:HH:mm}-{shift.endTime:HH:mm}) {date:dd.MM.yyyy}: нужно {shift.requiredNurses}, доступно {availableNurses.Count}");
+                    }
+
                     foreach (var nurse in availableNurses)
                     {
                         assignments.Add(new ScheduleAssignmentBindingModel
                         {
+                            scheduleId = newSchedule.id,
                             shiftId = shift.id,
                             staffId = nurse.id,
                             role = Roles.Nurse
                         });
 
-                        assignedNurseIds.Add(nurse.id); // помечаем как занятую
+                        assignedNurseIds.Add(nurse.id);
                         nurse.workedHours += shift.durationHours;
 
                         var nurseFromDb = _nurseStorage.GetElement(new NurseSearchModel { id = nurse.id });
@@ -326,26 +347,6 @@ namespace ClinicScheduleBusinessLogic.BusinessLogic
                     }
                 }
 
-
-                // Создаём расписание без назначений
-                var newSchedule = _scheduleStorage.Insert(new ScheduleBindingModel
-                {
-                    date = date,
-                    departmentId = departmentId
-                });
-
-                if (newSchedule == null)
-                {
-                    _logger.LogWarning($"Не удалось создать расписание на {date:dd.MM.yyyy} для департамента {departmentId}");
-                    continue;
-                }
-
-                // Привязываем назначения к расписанию
-                foreach (var assignment in assignments)
-                {
-                    assignment.scheduleId = newSchedule.id;
-                }
-
                 // Обновляем расписание с назначениями
                 _scheduleStorage.Update(new ScheduleBindingModel
                 {
@@ -360,7 +361,5 @@ namespace ClinicScheduleBusinessLogic.BusinessLogic
 
             return true;
         }
-
-
     }
 }

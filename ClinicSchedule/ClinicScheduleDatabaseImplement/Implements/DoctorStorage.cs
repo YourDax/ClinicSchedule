@@ -59,8 +59,14 @@ namespace ClinicScheduleDatabaseImplement.Implements
                 query = query.Where(x => x.fullname.Contains(model.fullname));
             }
 
+            if (model.departmentId.HasValue)
+            {
+                query = query.Where(x => x.departmentId == model.departmentId.Value);
+            }
+
             return query.Select(x => x.GetViewModel).ToList();
         }
+
 
         public List<DoctorViewModel> GetFullList()
         {

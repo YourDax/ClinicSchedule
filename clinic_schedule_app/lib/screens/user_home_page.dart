@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/ScheduleCell.dart';
+import '../models/user_model.dart';
 import '../providers/user_provider.dart';
 import '../api/api_client.dart'; // путь подкорректируй
 
@@ -44,9 +45,11 @@ class _UserHomePageState extends State<UserHomePage> {
 
       final data = await ApiClient.getScheduleForUser(
         userId: user.id,
+        role: user.role == UserRole.doctor ? 'Doctor' : 'Nurse',
         startDate: start,
         endDate: end,
       );
+
 
       setState(() {
         scheduleCells = data;
@@ -103,72 +106,75 @@ class _UserHomePageState extends State<UserHomePage> {
             ),
           Expanded(
             child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Table(
-                border: TableBorder.all(color: Colors.black26),
-                columnWidths: const {
-                  0: FixedColumnWidth(130),
-                  1: FixedColumnWidth(200),
-                  2: FixedColumnWidth(200),
-                },
-                defaultVerticalAlignment: TableCellVerticalAlignment.middle,
-                children: [
-                  // Заголовок
-                  TableRow(
-                    decoration: BoxDecoration(color: Colors.blue.shade100),
-                    children: const [
-                      Padding(
-                        padding: EdgeInsets.all(8),
-                        child: Text(
-                          'День / Дата',
-                          style: TextStyle(fontWeight: FontWeight.bold),
-                          textAlign: TextAlign.center,
-                        ),
-                      ),
-                      Padding(
-                        padding: EdgeInsets.all(8),
-                        child: Text(
-                          'Смена 1 (8:00 - 16:00)',
-                          style: TextStyle(fontWeight: FontWeight.bold),
-                          textAlign: TextAlign.center,
-                        ),
-                      ),
-                      Padding(
-                        padding: EdgeInsets.all(8),
-                        child: Text(
-                          'Смена 2 (16:00 - 24:00)',
-                          style: TextStyle(fontWeight: FontWeight.bold),
-                          textAlign: TextAlign.center,
-                        ),
-                      ),
-                    ],
-                  ),
-                  // Дни недели с данными
-                  for (var day in days)
+              scrollDirection: Axis.vertical,
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Table(
+                  border: TableBorder.all(color: Colors.black26),
+                  columnWidths: const {
+                    0: FixedColumnWidth(130),
+                    1: FixedColumnWidth(200),
+                    2: FixedColumnWidth(200),
+                  },
+                  defaultVerticalAlignment: TableCellVerticalAlignment.middle,
+                  children: [
+                    // Заголовок
                     TableRow(
-                      children: [
+                      decoration: BoxDecoration(color: Colors.blue.shade100),
+                      children: const [
                         Padding(
-                          padding: const EdgeInsets.all(8.0),
+                          padding: EdgeInsets.all(8),
                           child: Text(
-                            '${_weekdayName(day.weekday)}, ${day.day.toString().padLeft(2, '0')}.${day.month.toString().padLeft(2, '0')}',
+                            'День / Дата',
+                            style: TextStyle(fontWeight: FontWeight.bold),
                             textAlign: TextAlign.center,
-                            style: const TextStyle(fontWeight: FontWeight.w600),
                           ),
                         ),
                         Padding(
-                          padding: const EdgeInsets.all(8.0),
-                          child: _buildShiftCell(day, 1),
+                          padding: EdgeInsets.all(8),
+                          child: Text(
+                            'Смена 1 (8:00 - 16:00)',
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                            textAlign: TextAlign.center,
+                          ),
                         ),
                         Padding(
-                          padding: const EdgeInsets.all(8.0),
-                          child: _buildShiftCell(day, 2),
+                          padding: EdgeInsets.all(8),
+                          child: Text(
+                            'Смена 2 (16:00 - 24:00)',
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                            textAlign: TextAlign.center,
+                          ),
                         ),
                       ],
                     ),
-                ],
+                    // Дни недели
+                    for (var day in days)
+                      TableRow(
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.all(8.0),
+                            child: Text(
+                              '${_weekdayName(day.weekday)}, ${day.day.toString().padLeft(2, '0')}.${day.month.toString().padLeft(2, '0')}',
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(fontWeight: FontWeight.w600),
+                            ),
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.all(8.0),
+                            child: _buildShiftCell(day, 1),
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.all(8.0),
+                            child: _buildShiftCell(day, 2),
+                          ),
+                        ],
+                      ),
+                  ],
+                ),
               ),
             ),
-          ),
+          )
         ],
       ),
     );
@@ -179,29 +185,46 @@ class _UserHomePageState extends State<UserHomePage> {
     final user = userProvider.user;
 
     final cell = scheduleCells.firstWhere(
-          (c) => _isSameDate(c.date, date) && c.shiftNumber == shiftNumber,
-      orElse: () => ScheduleCell(date: date, shiftNumber: shiftNumber, staff: []),
+          (c) => _isSameDate(c.date, date),
+      orElse: () => ScheduleCell(id: 0, date: date, departmentId: 0, assignments: []),
     );
 
-    // Проверяем, есть ли залогиненный пользователь в списке staff этой смены
-    final userInShift = cell.staff.any((s) => s.fullName == user?.fullname);
+    final uniqueShiftIds = cell.assignments.map((a) => a.shiftId).toSet().toList()..sort();
 
-    if (!userInShift || cell.staff.isEmpty) {
-      return const Center(
-        child: Text(
-          'Выходной',
-          style: TextStyle(color: Colors.grey),
-        ),
-      );
+    if (shiftNumber > uniqueShiftIds.length) {
+      return const Center(child: Text('Выходной', style: TextStyle(color: Colors.grey)));
+    }
+
+    final shiftId = uniqueShiftIds[shiftNumber - 1];
+    final assignmentsForShift = cell.assignments.where((a) => a.shiftId == shiftId).toList();
+
+    if (assignmentsForShift.isEmpty) {
+      return const Center(child: Text('Выходной', style: TextStyle(color: Colors.grey)));
     }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
-      children: cell.staff
-          .map((s) => Text('${s.fullName} (${s.role})'))
-          .toList(),
+      children: assignmentsForShift.map((s) {
+        final isCurrentUser = s.staffId == user?.id && s.role == user?.role.index;
+        return Text.rich(
+          TextSpan(
+            text: s.fullName,
+            style: TextStyle(
+              fontWeight: isCurrentUser ? FontWeight.bold : FontWeight.normal,
+              color: isCurrentUser ? Colors.blue : Colors.black,
+            ),
+            children: [
+              if (isCurrentUser) const TextSpan(text: ' (Вы)'),
+              TextSpan(text: ' (${s.role == 1 ? "Доктор" : "Медсестра"})'),
+            ],
+          ),
+        );
+      }).toList(),
     );
   }
+
+
+
 
   bool _isSameDate(DateTime a, DateTime b) =>
       a.year == b.year && a.month == b.month && a.day == b.day;

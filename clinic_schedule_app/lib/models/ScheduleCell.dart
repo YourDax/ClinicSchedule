@@ -1,23 +1,27 @@
 import 'StaffMember.dart';
 
 class ScheduleCell {
+  final int id;
   final DateTime date;
-  final int shiftNumber; // 1 или 2
-  final List<StaffMember> staff;
+  final int departmentId;
+  final List<StaffMember> assignments;
 
   ScheduleCell({
+    required this.id,
     required this.date,
-    required this.shiftNumber,
-    required this.staff,
+    required this.departmentId,
+    required this.assignments,
   });
 
   factory ScheduleCell.fromJson(Map<String, dynamic> json) {
     return ScheduleCell(
+      id: json['id'] ?? 0,
       date: DateTime.parse(json['date']),
-      shiftNumber: json['shiftNumber'],
-      staff: (json['staff'] as List)
-          .map((e) => StaffMember.fromJson(e))
-          .toList(),
+      departmentId: json['departmentId'] ?? 0,
+      assignments: (json['assignments'] as List<dynamic>?)
+          ?.map((e) => StaffMember.fromJson(e))
+          .toList() ??
+          [],
     );
   }
 }

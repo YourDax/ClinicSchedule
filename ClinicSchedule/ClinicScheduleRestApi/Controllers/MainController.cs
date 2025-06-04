@@ -6,6 +6,7 @@ using ClinicScheduleContracts.BusinessLogicContracts;
 using ClinicScheduleContracts.RequestModels;
 using ClinicScheduleContracts.SearchModels;
 using ClinicScheduleContracts.ViewModels;
+using ClinicScheduleModels.Enums;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 
@@ -393,68 +394,107 @@ namespace ClinicRestApi.Controllers
                 throw;
             }
         }
+
         [HttpGet]
-        public List<ScheduleViewModel> GetForUser(int id, DateTime startDate, DateTime endDate)
+        public List<ScheduleViewModel> GetForUser(int userId, string role, DateTime startDate, DateTime endDate)
         {
-            var user = _user.ReadElement(new UserSearchModel { id = id });
-            if (user == null)
+            if (string.IsNullOrEmpty(role))
+                return new List<ScheduleViewModel>();
+
+            int? staffId = null;
+            int targetRole = -1;
+
+            if (role.Equals("Doctor", StringComparison.OrdinalIgnoreCase))
+            {
+                var doctor = _doctor.ReadElement(new DoctorSearchModel { id = userId });
+                if (doctor == null) return new List<ScheduleViewModel>();
+                staffId = doctor.id;
+                targetRole = 1;
+            }
+            else if (role.Equals("Nurse", StringComparison.OrdinalIgnoreCase))
+            {
+                var nurse = _nurse.ReadElement(new NurseSearchModel { id = userId });
+                if (nurse == null) return new List<ScheduleViewModel>();
+                staffId = nurse.id;
+                targetRole = 0;
+            }
+            else
             {
                 return new List<ScheduleViewModel>();
             }
 
-            // Получаем doctorId или nurseId
-            var doctor = _doctor.ReadElement(new DoctorSearchModel { id = id });
-            var nurse = _nurse.ReadElement(new NurseSearchModel { id = id });
-
-            var doctorId = doctor?.id;
-            var nurseId = nurse?.id;
-
-            // Получаем все расписания в заданном диапазоне
             var schedules = _schedule.ReadList(new ScheduleSearchModel
             {
                 startDateFrom = startDate,
                 startDateTo = endDate
             });
 
-            // Получаем все назначения
-            var assignments = _scheduleAssignment.ReadList(null);
+            var allAssignments = _scheduleAssignment.ReadList(null);
 
-            // Фильтруем назначения, относящиеся к этому пользователю
-            var userAssignments = assignments
-                .Where(x => (doctorId.HasValue && x.staffId == doctorId) ||
-                            (nurseId.HasValue && x.staffId == nurseId))
-                .ToList();
-
-            // Собираем расписания с назначениями, в которых участвует пользователь
             var result = new List<ScheduleViewModel>();
+
             foreach (var schedule in schedules)
             {
-                // Выбираем только те назначения, которые соответствуют текущему расписанию
-                var scheduleAssignments = userAssignments
+                // Назначения в этом дне
+                var scheduleAssignments = allAssignments
                     .Where(a => a.scheduleId == schedule.id)
                     .ToList();
+                Roles roleEnum = (Roles)targetRole;
+                // Находим смены, в которых участвует текущий пользователь
+                var userShifts = scheduleAssignments
+                    .Where(a => a.staffId == staffId && a.role == roleEnum)
+                    .Select(a => a.shiftId)
+                    .Distinct()
+                    .ToList();
 
-                if (scheduleAssignments.Count == 0)
+                if (!userShifts.Any())
                     continue;
+
+                // Отбираем все назначения в этих же сменах
+                var relatedAssignments = scheduleAssignments
+                    .Where(a => userShifts.Contains(a.shiftId))
+                    .ToList();
+
+                var detailedAssignments = new List<ScheduleAssignmentViewModel>();
+
+                foreach (var assignment in relatedAssignments)
+                {
+                    string name = "";
+                    if (assignment.role == Roles.Doctor) // Доктор
+                    {
+                        var doc = _doctor.ReadElement(new DoctorSearchModel { id = assignment.staffId });
+                        name = doc?.fullname ?? "(неизвестный доктор)";
+                    }
+                    else if (assignment.role == Roles.Nurse) // Медсестра
+                    {
+                        var nurse = _nurse.ReadElement(new NurseSearchModel { id = assignment.staffId });
+                        name = nurse?.fullname ?? "(неизвестная медсестра)";
+                    }
+
+                    detailedAssignments.Add(new ScheduleAssignmentViewModel
+                    {
+                        id = assignment.id,
+                        scheduleId = assignment.scheduleId,
+                        shiftId = assignment.shiftId,
+                        staffId = assignment.staffId,
+                        role = assignment.role,
+                        fullName = name
+                    });
+                }
 
                 result.Add(new ScheduleViewModel
                 {
                     id = schedule.id,
                     date = schedule.date,
                     departmentId = schedule.departmentId,
-                    assignments = scheduleAssignments.Select(a => new ScheduleAssignmentViewModel
-                    {
-                        id = a.id,
-                        scheduleId = a.scheduleId,
-                        shiftId = a.shiftId,
-                        staffId = a.staffId,
-                        role = a.role
-                    }).ToList()
+                    assignments = detailedAssignments
                 });
             }
 
             return result;
         }
+
+
 
 
         [HttpPost]

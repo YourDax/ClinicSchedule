@@ -104,11 +104,12 @@ class ApiClient {
   }
   static Future<List<ScheduleCell>> getScheduleForUser({
     required int userId,
+    required String role,
     required DateTime startDate,
     required DateTime endDate,
   }) async {
     final url = Uri.parse(
-      '$baseUrl/Main/GetForUser?userId=$userId&startDate=${startDate.toIso8601String()}&endDate=${endDate.toIso8601String()}',
+      '$baseUrl/Main/GetForUser?userId=$userId&role=$role&startDate=${startDate.toIso8601String()}&endDate=${endDate.toIso8601String()}',
     );
 
     print('\n==== API GET SCHEDULE FOR USER ====');
@@ -128,6 +129,7 @@ class ApiClient {
       throw Exception('Не удалось загрузить расписание (код ${response.statusCode})');
     }
   }
+
 
 
 }
