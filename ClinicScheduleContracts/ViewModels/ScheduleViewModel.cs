@@ -20,7 +20,7 @@ namespace ClinicScheduleContracts.ViewModels
         public int departmentId { get; set; }
         public int requiredDoctors { get; set; }
         public int requiredNurses { get; set; }
-
+        public List<DateTime> shiftStartTimes { get; set; } = new List<DateTime>();
 
         public List<ShiftViewModel> shiftViews { get; set; } = new();
 

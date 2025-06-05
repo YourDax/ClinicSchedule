@@ -109,7 +109,7 @@ class _GenerateScheduleScreenState extends State<GenerateScheduleScreen> {
         departmentId: selectedDepartment?.id ?? 0,
         assignments: [],
         requiredDoctors: 1,
-        requiredNurses: 1,
+        requiredNurses: 1, shiftViews: [],
       ),
     );
 

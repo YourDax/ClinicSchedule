@@ -471,6 +471,10 @@ namespace ClinicRestApi.Controllers
                         var nurse = _nurse.ReadElement(new NurseSearchModel { id = assignment.staffId });
                         name = nurse?.fullname ?? "(неизвестная медсестра)";
                     }
+                    var shiftsForSchedule = _shift.ReadList(new ShiftSearchModel { scheduleId = schedule.id });
+
+                    // Получаем смену, чтобы взять startTime
+                    var shift = shiftsForSchedule.FirstOrDefault(s => s.id == assignment.shiftId);
 
                     detailedAssignments.Add(new ScheduleAssignmentViewModel
                     {
@@ -479,7 +483,8 @@ namespace ClinicRestApi.Controllers
                         shiftId = assignment.shiftId,
                         staffId = assignment.staffId,
                         role = assignment.role,
-                        fullName = name
+                        fullName = name,
+                        shiftStartTime = shift?.startTime // здесь nullable, если смена не найдена — null
                     });
                 }
 
@@ -488,7 +493,7 @@ namespace ClinicRestApi.Controllers
                     id = schedule.id,
                     date = schedule.date,
                     departmentId = schedule.departmentId,
-                    assignments = detailedAssignments
+                    assignments = detailedAssignments,
                 });
             }
 

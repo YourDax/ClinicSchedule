@@ -27,5 +27,7 @@ namespace ClinicScheduleContracts.ViewModels
 
         // Этот метод можно реализовать в логике, подгружая нужного пользователя по role и staffId
         IUserModel IScheduleAssignmentModel.user => throw new NotImplementedException();
+        public DateTime? shiftStartTime { get; set; }
+
     }
 }

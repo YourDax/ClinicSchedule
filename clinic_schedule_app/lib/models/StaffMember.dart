@@ -4,7 +4,8 @@ class StaffMember {
   final int shiftId;
   final int staffId;
   final int role;
-  final String fullName; // Если на сервере нет — можно оставить пустым или задавать в UI
+  final String fullName;
+  final DateTime? shiftStartTime;// Если на сервере нет — можно оставить пустым или задавать в UI
 
   StaffMember({
     required this.id,
@@ -13,6 +14,7 @@ class StaffMember {
     required this.staffId,
     required this.role,
     required this.fullName,
+    this.shiftStartTime,
   });
 
   factory StaffMember.fromJson(Map<String, dynamic> json) {
@@ -23,6 +25,9 @@ class StaffMember {
       staffId: json['staffId'] ?? 0,
       role: json['role'] ?? 0,
       fullName: json['fullName'] ?? 'Неизвестно', // если сервер не отдаёт, можно потом добавлять
+      shiftStartTime: json['shiftStartTime'] != null
+          ? DateTime.tryParse(json['shiftStartTime'])
+          : null,
     );
   }
 }

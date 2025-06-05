@@ -6,7 +6,8 @@ class ScheduleCell {
   final int departmentId;
   final List<StaffMember> assignments;
 
-  // Новые поля для обязательного количества
+  final List<Shift> shiftViews; // non-nullable
+
   final int requiredDoctors;
   final int requiredNurses;
 
@@ -15,7 +16,8 @@ class ScheduleCell {
     required this.date,
     required this.departmentId,
     required this.assignments,
-    this.requiredDoctors = 1,  // Значения по умолчанию
+    required this.shiftViews,
+    this.requiredDoctors = 1,
     this.requiredNurses = 1,
   });
 
@@ -26,11 +28,30 @@ class ScheduleCell {
       departmentId: json['departmentId'] ?? 0,
       assignments: (json['assignments'] as List<dynamic>?)
           ?.map((e) => StaffMember.fromJson(e))
-          .toList() ??
-          [],
-      // Парсим новые поля, если они есть в json, иначе по умолчанию
+          .toList() ?? [],
+      shiftViews: (json['shiftViews'] as List<dynamic>?)
+          ?.map((e) => Shift.fromJson(e))
+          .toList() ?? [],  // вот тут гарантируем non-null список
       requiredDoctors: json['requiredDoctors'] ?? 1,
       requiredNurses: json['requiredNurses'] ?? 1,
+    );
+  }
+}
+
+
+class Shift {
+  final int id;
+  final DateTime startTime;
+
+  Shift({
+    required this.id,
+    required this.startTime,
+  });
+
+  factory Shift.fromJson(Map<String, dynamic> json) {
+    return Shift(
+      id: json['id'],
+      startTime: DateTime.parse(json['startTime']), // формат даты-времени в json
     );
   }
 }
