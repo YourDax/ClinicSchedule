@@ -1,9 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
+import 'package:gallery_saver/gallery_saver.dart';
 import '../../api/api_client.dart';
 import '../../models/department_model.dart';
 import '../models/Assignment.dart';
 import '../models/ScheduleCell.dart';
 import 'edit_shift_screen.dart';
+import 'dart:ui' as ui;
+import 'dart:typed_data';
+import 'dart:io';
+import 'package:path_provider/path_provider.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 class GenerateScheduleScreen extends StatefulWidget {
   const GenerateScheduleScreen({Key? key}) : super(key: key);
@@ -17,6 +24,7 @@ class _GenerateScheduleScreenState extends State<GenerateScheduleScreen> {
   DepartmentModel? selectedDepartment;
   List<DepartmentModel> departments = [];
   late List<DateTime> days;
+  final GlobalKey _tableKey = GlobalKey();
 
   bool isLoadingDepartments = false;
   bool isLoadingSchedule = false;
@@ -200,7 +208,52 @@ class _GenerateScheduleScreenState extends State<GenerateScheduleScreen> {
   }
 
 
+  Future<void> _saveAsPng(GlobalKey key, BuildContext context) async {
+    try {
+      // Получаем RenderRepaintBoundary
+      final boundary = key.currentContext?.findRenderObject() as RenderRepaintBoundary?;
+      if (boundary == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Не удалось получить изображение')),
+        );
+        return;
+      }
 
+      final image = await boundary.toImage(pixelRatio: 3.0);
+      final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+      if (byteData == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Ошибка при конвертации изображения')),
+        );
+        return;
+      }
+      final pngBytes = byteData.buffer.asUint8List();
+
+      // Сохраняем временный файл (gallery_saver принимает путь к файлу, а не Uint8List)
+      // Нужно сохранить pngBytes во временный файл:
+      final tempDir = await getTemporaryDirectory();
+      final filePath = '${tempDir.path}/schedule_${DateTime.now().millisecondsSinceEpoch}.png';
+      final file = File(filePath);
+      await file.writeAsBytes(pngBytes);
+
+      // Сохраняем файл в галерею
+      final success = await GallerySaver.saveImage(file.path);
+
+      if (success == true) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Изображение сохранено в галерею')),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Не удалось сохранить изображение')),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Ошибка при сохранении: $e')),
+      );
+    }
+  }
 
 
   bool _isSameDate(DateTime a, DateTime b) {
@@ -261,66 +314,87 @@ class _GenerateScheduleScreenState extends State<GenerateScheduleScreen> {
                 scrollDirection: Axis.vertical,
                 child: SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
-                  child: Table(
-                    border: TableBorder.all(color: Colors.black26),
-                    columnWidths: const {
-                      0: FixedColumnWidth(130),
-                      1: FixedColumnWidth(200),
-                      2: FixedColumnWidth(200),
-                    },
-                    defaultVerticalAlignment: TableCellVerticalAlignment.middle,
-                    children: [
-                      TableRow(
-                        decoration: BoxDecoration(color: Colors.blue.shade100),
-                        children: const [
-                          Padding(
-                            padding: EdgeInsets.all(8),
-                            child: Text(
-                              'День / Дата',
-                              style: TextStyle(fontWeight: FontWeight.bold),
-                              textAlign: TextAlign.center,
-                            ),
-                          ),
-                          Padding(
-                            padding: EdgeInsets.all(8),
-                            child: Text(
-                              'Смена 1 (8:00 - 16:00)',
-                              style: TextStyle(fontWeight: FontWeight.bold),
-                              textAlign: TextAlign.center,
-                            ),
-                          ),
-                          Padding(
-                            padding: EdgeInsets.all(8),
-                            child: Text(
-                              'Смена 2 (16:00 - 24:00)',
-                              style: TextStyle(fontWeight: FontWeight.bold),
-                              textAlign: TextAlign.center,
-                            ),
-                          ),
-                        ],
-                      ),
-                      for (var day in days)
+                  child: RepaintBoundary(
+                    key: _tableKey,
+                    child: Table(
+                      border: TableBorder.all(color: Colors.black26),
+                      columnWidths: const {
+                        0: FixedColumnWidth(130),
+                        1: FixedColumnWidth(200),
+                        2: FixedColumnWidth(200),
+                      },
+                      defaultVerticalAlignment: TableCellVerticalAlignment.middle,
+                      children: [
                         TableRow(
+                          decoration: BoxDecoration(color: Colors.blue.shade100),
                           children: [
-                            Padding(
-                              padding: const EdgeInsets.all(8.0),
-                              child: Text(
-                                '${_weekdayName(day.weekday)}, ${day.day.toString().padLeft(2, '0')}.${day.month.toString().padLeft(2, '0')}',
-                                textAlign: TextAlign.center,
-                                style: const TextStyle(fontWeight: FontWeight.w600),
+                            Container(
+                              color: Colors.white,
+                              child: const Padding(
+                                padding: EdgeInsets.all(8),
+                                child: Text(
+                                  'День / Дата',
+                                  style: TextStyle(fontWeight: FontWeight.bold),
+                                  textAlign: TextAlign.center,
+                                ),
                               ),
                             ),
-                            Padding(
-                              padding: const EdgeInsets.all(8.0),
-                              child: _buildShiftCell(day, 1),
+                            Container(
+                              color: Colors.white,
+                              child: const Padding(
+                                padding: EdgeInsets.all(8),
+                                child: Text(
+                                  'Смена 1 (8:00 - 16:00)',
+                                  style: TextStyle(fontWeight: FontWeight.bold),
+                                  textAlign: TextAlign.center,
+                                ),
+                              ),
                             ),
-                            Padding(
-                              padding: const EdgeInsets.all(8.0),
-                              child: _buildShiftCell(day, 2),
+                            Container(
+                              color: Colors.white,
+                              child: const Padding(
+                                padding: EdgeInsets.all(8),
+                                child: Text(
+                                  'Смена 2 (16:00 - 24:00)',
+                                  style: TextStyle(fontWeight: FontWeight.bold),
+                                  textAlign: TextAlign.center,
+                                ),
+                              ),
                             ),
                           ],
                         ),
-                    ],
+                        for (var day in days)
+                          TableRow(
+                            children: [
+                              Container(
+                                color: Colors.white,
+                                child: Padding(
+                                  padding: const EdgeInsets.all(8.0),
+                                  child: Text(
+                                    '${_weekdayName(day.weekday)}, ${day.day.toString().padLeft(2, '0')}.${day.month.toString().padLeft(2, '0')}',
+                                    textAlign: TextAlign.center,
+                                    style: const TextStyle(fontWeight: FontWeight.w600),
+                                  ),
+                                ),
+                              ),
+                              Container(
+                                color: Colors.white,
+                                child: Padding(
+                                  padding: const EdgeInsets.all(8.0),
+                                  child: _buildShiftCell(day, 1),
+                                ),
+                              ),
+                              Container(
+                                color: Colors.white,
+                                child: Padding(
+                                  padding: const EdgeInsets.all(8.0),
+                                  child: _buildShiftCell(day, 2),
+                                ),
+                              ),
+                            ],
+                          ),
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -364,6 +438,17 @@ class _GenerateScheduleScreenState extends State<GenerateScheduleScreen> {
                     : const Text('Сгенерировать расписание'),
               ),
             ),
+            const SizedBox(height: 8),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                icon: const Icon(Icons.save_alt),
+                label: const Text('Сохранить как PNG'),
+                onPressed: () => _saveAsPng(_tableKey, context),
+              ),
+            ),
+
+
           ],
         ),
       ),

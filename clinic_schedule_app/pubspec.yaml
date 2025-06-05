@@ -13,11 +13,14 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  http: ^1.4.0
+  http: ^0.13.5
   provider: ^6.0.5
+  path_provider: ^2.0.15
+  permission_handler: ^10.4.0
+  gallery_saver: ^2.3.2
   # Виджеты
   cupertino_icons: ^1.0.8
-  flutter_svg: ^2.0.16
+  flutter_svg: ^2.0.9
 
   # Сетевое взаимодействие
   json_annotation: ^4.8.1
