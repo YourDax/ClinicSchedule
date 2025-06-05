@@ -8,6 +8,7 @@ import '../models/ScheduleViewModel.dart';
 import '../models/ShiftBindingModel.dart';
 import '../models/ShiftDetails.dart';
 import '../models/ShiftViewModel.dart';
+import '../models/UniversalUserUpdateModel.dart';
 import '../models/department_model.dart';
 import '../models/doctor_model.dart';
 import '../models/nurse_model.dart';
@@ -35,6 +36,40 @@ class ApiClient {
 
     throw Exception('Не удалось загрузить департаменты');
   }
+  static Future<void> updateUser(UniversalUserUpdateModel model) async {
+    final url = Uri.parse('$baseUrl/User/UpdateData');
+    print('ApiClient: updateUser POST $url');
+    print('Payload: ${jsonEncode(model.toJson())}');
+
+    final response = await http.post(
+      url,
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode(model.toJson()),
+    );
+
+    print('Response status: ${response.statusCode}');
+    print('Response body: ${response.body}');
+
+    if (response.statusCode != 200) {
+      throw Exception('Failed to update user: ${response.body}');
+    }
+  }
+  static Future<UserModel> getUserById(int id, int role) async {
+    final url = Uri.parse('$baseUrl/User/GetById?id=$id&role=$role');
+    print('ApiClient.getUserById: GET $url');
+
+    final response = await http.get(url);
+
+    if (response.statusCode == 200) {
+      print('ApiClient.getUserById: success');
+      final data = jsonDecode(response.body);
+      return UserModel.fromJson(data);
+    } else {
+      print('ApiClient.getUserById: failed with status ${response.statusCode}');
+      throw Exception('Ошибка загрузки пользователя: ${response.statusCode}');
+    }
+  }
+
 
   static Future<UserModel?> register(
       String fullname,
@@ -265,6 +300,47 @@ class ApiClient {
       return ShiftDetails.fromJson(data);
     } else {
       throw Exception('Failed to load shift details');
+    }
+  }
+  static Future<List<DoctorModel>> getDoctorList() async {
+    final url = Uri.parse('$baseUrl/Main/GetDoctorList');
+
+    print('\n==== API GET DOCTOR LIST ====');
+    print('GET $url');
+
+    final res = await http.get(url);
+
+    print('Response Code: ${res.statusCode}');
+    print('Response Headers: ${res.headers}');
+    print('Response Body: ${res.body}');
+    print('=======================================\n');
+
+    if (res.statusCode == 200) {
+      final List data = jsonDecode(res.body);
+      return data.map((e) => DoctorModel.fromJson(e)).toList();
+    } else {
+      throw Exception('Failed to load doctors');
+    }
+  }
+
+  static Future<List<NurseModel>> getNurseList() async {
+    final url = Uri.parse('$baseUrl/Main/GetNurseList');
+
+    print('\n==== API GET NURSE LIST ====');
+    print('GET $url');
+
+    final res = await http.get(url);
+
+    print('Response Code: ${res.statusCode}');
+    print('Response Headers: ${res.headers}');
+    print('Response Body: ${res.body}');
+    print('=======================================\n');
+
+    if (res.statusCode == 200) {
+      final List data = jsonDecode(res.body);
+      return data.map((e) => NurseModel.fromJson(e)).toList();
+    } else {
+      throw Exception('Failed to load nurses');
     }
   }
 
@@ -588,7 +664,48 @@ class ApiClient {
       throw Exception('Ошибка обновления доктора: ${response.reasonPhrase}');
     }
   }
+  static Future<void> createDepartment(Map<String, dynamic> model) async {
+    final uri = Uri.parse('$baseUrl/Main/CreateDepartment');
+    print('\n==== API CREATE DEPARTMENT ====');
+    print('POST $uri');
+    print('Request Body: ${json.encode(model)}');
 
+    final response = await http.post(
+      uri,
+      headers: {'Content-Type': 'application/json'},
+      body: json.encode(model),
+    );
+
+    print('Response Code: ${response.statusCode}');
+    print('Response Body: ${response.body}');
+    print('==============================\n');
+
+    if (response.statusCode != 200) {
+      throw Exception('Ошибка создания отделения: ${response.reasonPhrase}');
+    }
+  }
+
+  // Обновление отделения
+  static Future<void> updateDepartment(Map<String, dynamic> model) async {
+    final uri = Uri.parse('$baseUrl/Main/UpdateDepartment');
+    print('\n==== API UPDATE DEPARTMENT ====');
+    print('POST $uri');
+    print('Request Body: ${json.encode(model)}');
+
+    final response = await http.post(
+      uri,
+      headers: {'Content-Type': 'application/json'},
+      body: json.encode(model),
+    );
+
+    print('Response Code: ${response.statusCode}');
+    print('Response Body: ${response.body}');
+    print('==============================\n');
+
+    if (response.statusCode != 200) {
+      throw Exception('Ошибка обновления отделения: ${response.reasonPhrase}');
+    }
+  }
   // Создание медсестры
   static Future<void> createNurse(Map<String, dynamic> model) async {
     final uri = Uri.parse('$baseUrl/Main/CreateNurse');

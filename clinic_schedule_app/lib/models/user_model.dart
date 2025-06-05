@@ -2,10 +2,14 @@ enum UserRole { nurse, doctor, admin }
 
 UserRole roleFromInt(int value) {
   switch (value) {
-    case 0: return UserRole.nurse;
-    case 1: return UserRole.doctor;
-    case 2: return UserRole.admin;
-    default: throw Exception('Invalid role value: $value');
+    case 0:
+      return UserRole.nurse;
+    case 1:
+      return UserRole.doctor;
+    case 2:
+      return UserRole.admin;
+    default:
+      throw Exception('Invalid role value: $value');
   }
 }
 
@@ -19,6 +23,8 @@ class UserModel {
   final List<DateTime> vacationDates;
   final UserRole role;
   final double workedHours;
+  final int? departmentId;
+  final int? experienceYears;
 
   UserModel({
     required this.id,
@@ -30,6 +36,8 @@ class UserModel {
     required this.vacationDates,
     required this.role,
     required this.workedHours,
+    this.departmentId,
+    this.experienceYears,
   });
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
@@ -45,6 +53,32 @@ class UserModel {
           .toList(),
       role: roleFromInt(json['role']),
       workedHours: (json['workedHours'] as num).toDouble(),
+      departmentId: json['departmentId'],
+      experienceYears: json['experienceYears'],
+    );
+  }
+
+  UserModel copyWith({
+    String? fullname,
+    String? phoneNumber,
+    DateTime? birthdate,
+    String? password,
+    String? login,
+    int? departmentId,
+    int? experienceYears,
+  }) {
+    return UserModel(
+      id: this.id,
+      login: login ?? this.login,
+      password: password ?? this.password,
+      fullname: fullname ?? this.fullname,
+      birthdate: birthdate ?? this.birthdate,
+      phoneNumber: phoneNumber ?? this.phoneNumber,
+      vacationDates: this.vacationDates,
+      workedHours: this.workedHours,
+      role: this.role,
+      departmentId: departmentId ?? this.departmentId,
+      experienceYears: experienceYears ?? this.experienceYears,
     );
   }
 }

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'DepartmentScreen.dart';
 import 'ManageStaffScreen.dart';
+import 'StaffStatisticScreen.dart';
 import 'generate_schedule_screen.dart'; // твой экран для работы с расписанием
 
 class AdminHomePage extends StatelessWidget {
@@ -17,9 +19,16 @@ class AdminHomePage extends StatelessWidget {
           context,
           MaterialPageRoute(builder: (_) => const ManageStaffScreen()),
         );
-        break;
-
-
+      case 'Редактировать/создать отделение':
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const DepartmentsScreen()),
+        );
+      case 'Статистика по медперсоналу':
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const StaffStatisticsScreen()),
+        );
         break;
       default:
         ScaffoldMessenger.of(context).showSnackBar(
