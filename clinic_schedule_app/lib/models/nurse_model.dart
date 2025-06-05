@@ -2,6 +2,7 @@ import 'user_model.dart';
 
 class NurseModel extends UserModel {
   final int departmentId;
+  final String? specialization; // новое поле
 
   NurseModel({
     required super.id,
@@ -14,6 +15,7 @@ class NurseModel extends UserModel {
     required super.role,
     required super.workedHours,
     required this.departmentId,
+    this.specialization, // инициализация нового поля
   });
 
   factory NurseModel.fromJson(Map<String, dynamic> json) {
@@ -30,6 +32,23 @@ class NurseModel extends UserModel {
       role: roleFromInt(json['role']),
       workedHours: (json['workedHours'] as num).toDouble(),
       departmentId: json['departmentId'],
+      specialization: json['specialization'], // читаем specialization из JSON (может быть null)
     );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'login': login,
+      'password': password,
+      'fullname': fullname,
+      'birthdate': birthdate.toIso8601String(),
+      'phoneNumber': phoneNumber,
+      'vacationDates': vacationDates.map((d) => d.toIso8601String()).toList(),
+      'role': role.index,
+      'workedHours': workedHours,
+      'departmentId': departmentId,
+      'specialization': specialization,
+    };
   }
 }

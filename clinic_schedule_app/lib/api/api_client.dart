@@ -545,7 +545,93 @@ class ApiClient {
     return response.statusCode == 200;
   }
 
+  // Создание доктора
+  static Future<void> createDoctor(Map<String, dynamic> model) async {
+    final uri = Uri.parse('$baseUrl/Main/CreateDoctor');
+    print('\n==== API CREATE DOCTOR ====');
+    print('POST $uri');
+    print('Request Body: ${json.encode(model)}');
 
+    final response = await http.post(
+      uri,
+      headers: {'Content-Type': 'application/json'},
+      body: json.encode(model),
+    );
+
+    print('Response Code: ${response.statusCode}');
+    print('Response Body: ${response.body}');
+    print('==========================\n');
+
+    if (response.statusCode != 200) {
+      throw Exception('Ошибка создания доктора: ${response.reasonPhrase}');
+    }
+  }
+
+  // Обновление доктора
+  static Future<void> updateDoctor(Map<String, dynamic> model) async {
+    final uri = Uri.parse('$baseUrl/Main/UpdateDoctor');
+    print('\n==== API UPDATE DOCTOR ====');
+    print('POST $uri');
+    print('Request Body: ${json.encode(model)}');
+
+    final response = await http.post(
+      uri,
+      headers: {'Content-Type': 'application/json'},
+      body: json.encode(model),
+    );
+
+    print('Response Code: ${response.statusCode}');
+    print('Response Body: ${response.body}');
+    print('==========================\n');
+
+    if (response.statusCode != 200) {
+      throw Exception('Ошибка обновления доктора: ${response.reasonPhrase}');
+    }
+  }
+
+  // Создание медсестры
+  static Future<void> createNurse(Map<String, dynamic> model) async {
+    final uri = Uri.parse('$baseUrl/Main/CreateNurse');
+    print('\n==== API CREATE NURSE ====');
+    print('POST $uri');
+    print('Request Body: ${json.encode(model)}');
+
+    final response = await http.post(
+      uri,
+      headers: {'Content-Type': 'application/json'},
+      body: json.encode(model),
+    );
+
+    print('Response Code: ${response.statusCode}');
+    print('Response Body: ${response.body}');
+    print('==========================\n');
+
+    if (response.statusCode != 200) {
+      throw Exception('Ошибка создания медсестры: ${response.reasonPhrase}');
+    }
+  }
+
+  // Обновление медсестры
+  static Future<void> updateNurse(Map<String, dynamic> model) async {
+    final uri = Uri.parse('$baseUrl/Main/UpdateNurse');
+    print('\n==== API UPDATE NURSE ====');
+    print('POST $uri');
+    print('Request Body: ${json.encode(model)}');
+
+    final response = await http.post(
+      uri,
+      headers: {'Content-Type': 'application/json'},
+      body: json.encode(model),
+    );
+
+    print('Response Code: ${response.statusCode}');
+    print('Response Body: ${response.body}');
+    print('==========================\n');
+
+    if (response.statusCode != 200) {
+      throw Exception('Ошибка обновления медсестры: ${response.reasonPhrase}');
+    }
+  }
 
 
 

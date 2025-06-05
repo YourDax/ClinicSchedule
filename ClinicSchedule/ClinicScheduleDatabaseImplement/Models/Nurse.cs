@@ -13,7 +13,6 @@ namespace ClinicScheduleDatabaseImplement.Models
         [Required]
         public string login { get; set; } = string.Empty;
 
-        [Required]
         public string password { get; set; } = string.Empty;
 
         [Required]
@@ -56,7 +55,13 @@ namespace ClinicScheduleDatabaseImplement.Models
         {
             if (model == null) return;
             login = model.login;
-            password = model.password;
+
+            if (!string.IsNullOrEmpty(model.password))
+            {
+                password = model.password;
+            }
+            // если пароль пустой или null — оставить старый
+
             fullname = model.fullname;
             birthdate = model.birthdate;
             phoneNumber = model.phoneNumber;
@@ -66,6 +71,7 @@ namespace ClinicScheduleDatabaseImplement.Models
             departmentId = model.departmentId;
             specialization = model.specialization;
         }
+
 
         public NurseViewModel GetViewModel => new()
         {
