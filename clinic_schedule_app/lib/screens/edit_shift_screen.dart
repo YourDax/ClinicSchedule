@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../models/Assignment.dart';
 import '../models/ScheduleAssignmentBindingModel.dart';
 import '../models/ScheduleBindingModel.dart';
+import '../models/ScheduleCell.dart';
 import '../models/ShiftBindingModel.dart';
 import '../models/ShiftViewModel.dart';
 import '../models/doctor_model.dart';
@@ -18,6 +19,7 @@ class EditShiftScreen extends StatefulWidget {
   final int requiredNursesCount;
   final DateTime? startTime; // добавлено
   final DateTime? endTime;   // добавлено
+  final List<Shift> shiftViews;
 
   const EditShiftScreen({
     Key? key,
@@ -29,6 +31,7 @@ class EditShiftScreen extends StatefulWidget {
     required this.requiredNursesCount,
     this.startTime,
     this.endTime,
+    required this.shiftViews,
   }) : super(key: key);
 
 
@@ -87,45 +90,94 @@ class _EditShiftScreenState extends State<EditShiftScreen> {
 
   Future<void> _loadAvailableStaff() async {
     try {
-      final doctors = await ApiClient.getDoctorsByDepartment(
-          widget.departmentId);
+      // 1. Запросить всех врачей и медсестёр департамента
+      final doctors = await ApiClient.getDoctorsByDepartment(widget.departmentId);
       final nurses = await ApiClient.getNursesByDepartment(widget.departmentId);
 
-      final doctorIds = doctors.map((e) => e.id).toSet();
-      final nurseIds = nurses.map((e) => e.id).toSet();
+      // 2. Запросить расписание на день, чтобы получить назначения на все смены
+      final scheduleCells = await ApiClient.getScheduleByDepartment(
+        departmentId: widget.departmentId,
+        startDate: widget.date,
+        endDate: widget.date,
+      );
+
+      // 3. Собрать userId работников, которые назначены в соседних сменах
+      final assignedInOtherShiftsDoctorIds = <int>{};
+      final assignedInOtherShiftsNurseIds = <int>{};
+
+      // У тебя должен быть widget.shiftId — текущая редактируемая смена
+      final currentShiftId = widget.shiftId;
+
+      for (final cell in scheduleCells) {
+        for (final assignment in cell.assignments) {
+          if (assignment.shiftId != currentShiftId) {
+            if (assignment.role == 1) {
+              assignedInOtherShiftsDoctorIds.add(assignment.staffId);
+            } else if (assignment.role == 0) {
+              assignedInOtherShiftsNurseIds.add(assignment.staffId);
+            }
+          }
+        }
+      }
+
+      // 4. Отфильтровать врачей и медсестёр:
+      final filteredDoctors = doctors.where((doc) {
+        final isOnVacation = doc.vacationDates.any((vDate) => _isSameDate(vDate, widget.date));
+        final isAssignedElsewhere = assignedInOtherShiftsDoctorIds.contains(doc.id);
+        return !isOnVacation && !isAssignedElsewhere;
+      }).toList();
+
+      final filteredNurses = nurses.where((nurse) {
+        final isOnVacation = nurse.vacationDates.any((vDate) => _isSameDate(vDate, widget.date));
+        final isAssignedElsewhere = assignedInOtherShiftsNurseIds.contains(nurse.id);
+        return !isOnVacation && !isAssignedElsewhere;
+      }).toList();
+
+      // 5. Добавить работников из текущих назначений, которых нет в списке (чтобы не потерять выбор)
+      final currentAssignedDoctors = widget.assignments
+          .where((a) => a.role == 1)
+          .map((a) => a.userId)
+          .toSet();
+      final currentAssignedNurses = widget.assignments
+          .where((a) => a.role == 0)
+          .map((a) => a.userId)
+          .toSet();
 
       final additionalDoctors = <DoctorModel>[];
-      final additionalNurses = <NurseModel>[];
+      for (final id in currentAssignedDoctors) {
+        if (!filteredDoctors.any((d) => d.id == id)) {
+          final doc = await ApiClient.getDoctorById(id);
+          if (doc != null) additionalDoctors.add(doc);
+        }
+      }
 
-      for (final a in widget.assignments) {
-        if (a.role == 1 && !doctorIds.contains(a.userId)) {
-          final doctor = await ApiClient.getDoctorById(a.userId);
-          if (doctor != null) additionalDoctors.add(doctor);
-        } else if (a.role == 0 && !nurseIds.contains(a.userId)) {
-          final nurse = await ApiClient.getNurseById(a.userId);
+      final additionalNurses = <NurseModel>[];
+      for (final id in currentAssignedNurses) {
+        if (!filteredNurses.any((n) => n.id == id)) {
+          final nurse = await ApiClient.getNurseById(id);
           if (nurse != null) additionalNurses.add(nurse);
         }
       }
 
       setState(() {
-        availableDoctors = [...doctors, ...additionalDoctors];
-        availableNurses = [...nurses, ...additionalNurses];
-
-        selectedDoctors = widget.assignments
-            .where((a) => a.role == 1)
-            .map((a) => availableDoctors.firstWhere((d) => d.id == a.userId))
-            .toList();
-
-        selectedNurses = widget.assignments
-            .where((a) => a.role == 0)
-            .map((a) => availableNurses.firstWhere((n) => n.id == a.userId))
-            .toList();
+        availableDoctors = [...filteredDoctors, ...additionalDoctors];
+        availableNurses = [...filteredNurses, ...additionalNurses];
       });
 
-      _loadAssignments();
+      _loadAssignments();  // заполнить выбранных
+
     } catch (e) {
-      print('Ошибка загрузки персонала: $e');
+      print('Ошибка загрузки персонала с учётом соседних смен: $e');
     }
+  }
+
+  Future<List<ScheduleCell>> fetchScheduleForDepartment(int departmentId, DateTime date) async {
+    // Например, для одного дня, дата startDate = endDate = date
+    return await ApiClient.getScheduleByDepartment(
+      departmentId: departmentId,
+      startDate: date,
+      endDate: date,
+    );
   }
 
   List<DoctorModel> _getFilteredDoctors(int currentIndex) {
@@ -136,8 +188,14 @@ class _EditShiftScreenState extends State<EditShiftScreen> {
         .map((entry) => entry.value!.id)
         .toSet();
 
+    final shiftIdsOnSameDay = widget.shiftViews
+        .where((s) => _isSameDate(s.startTime, widget.date))
+        .map((s) => s.id)
+        .where((id) => id != widget.shiftId)
+        .toSet();
+
     final assignedOtherShiftIds = widget.assignments
-        .where((a) => a.role == 1 && a.shiftId != widget.shiftId)
+        .where((a) => a.role == 1 && shiftIdsOnSameDay.contains(a.shiftId))
         .map((a) => a.userId)
         .toSet();
 
@@ -157,8 +215,14 @@ class _EditShiftScreenState extends State<EditShiftScreen> {
         .map((entry) => entry.value!.id)
         .toSet();
 
+    final shiftIdsOnSameDay = widget.shiftViews
+        .where((s) => _isSameDate(s.startTime, widget.date))
+        .map((s) => s.id)
+        .where((id) => id != widget.shiftId)
+        .toSet();
+
     final assignedOtherShiftIds = widget.assignments
-        .where((a) => a.role == 0 && a.shiftId != widget.shiftId)
+        .where((a) => a.role == 0 && shiftIdsOnSameDay.contains(a.shiftId))
         .map((a) => a.userId)
         .toSet();
 
@@ -169,6 +233,7 @@ class _EditShiftScreenState extends State<EditShiftScreen> {
           !assignedOtherShiftIds.contains(nurse.id);
     }).toList();
   }
+
 
 
 

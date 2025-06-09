@@ -5,6 +5,7 @@ import '../../api/api_client.dart';
 import '../../models/department_model.dart';
 import '../models/Assignment.dart';
 import '../models/ScheduleCell.dart';
+import '../models/ShiftViewModel.dart';
 import 'edit_shift_screen.dart';
 import 'dart:ui' as ui;
 import 'dart:typed_data';
@@ -157,7 +158,8 @@ class _GenerateScheduleScreenState extends State<GenerateScheduleScreen> {
         departmentId: selectedDepartment?.id ?? 0,
         assignments: [],
         requiredDoctors: 1,
-        requiredNurses: 1, shiftViews: [],
+        requiredNurses: 1,
+        shiftViews: [],
       ),
     );
 
@@ -181,7 +183,6 @@ class _GenerateScheduleScreenState extends State<GenerateScheduleScreen> {
       // Для 24:00 лучше ставить 00:00 следующего дня
       endTime = DateTime(date.year, date.month, date.day).add(const Duration(days: 1));
     } else {
-      // Для других смен, если будут, можно задать дефолтное время или null
       startTime = DateTime(date.year, date.month, date.day, 0);
       endTime = DateTime(date.year, date.month, date.day, 0);
     }
@@ -201,6 +202,8 @@ class _GenerateScheduleScreenState extends State<GenerateScheduleScreen> {
                 requiredNursesCount: cell.requiredNurses,
                 startTime: startTime,
                 endTime: endTime,
+                shiftViews: cell.shiftViews, //TODO надо передавать все смены которые пришли из запроса
+
               ),
             ),
           ).then((_) => _loadSchedule());
@@ -234,6 +237,7 @@ class _GenerateScheduleScreenState extends State<GenerateScheduleScreen> {
               requiredNursesCount: cell.requiredNurses,
               startTime: startTime,
               endTime: endTime,
+              shiftViews: cell.shiftViews,
             ),
           ),
         ).then((_) => _loadSchedule());
