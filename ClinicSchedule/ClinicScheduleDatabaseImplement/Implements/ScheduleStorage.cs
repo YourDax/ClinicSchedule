@@ -50,13 +50,28 @@ namespace ClinicScheduleDatabaseImplement.Implements
 
             if (schedule != null)
             {
+                // Удаляем связанные назначения
+                if (schedule.assignments != null)
+                {
+                    context.ScheduleAssignments.RemoveRange(schedule.assignments);
+                }
+
+                // Удаляем связанные смены
+                if (schedule.shiftEntities != null)
+                {
+                    context.Shifts.RemoveRange(schedule.shiftEntities);
+                }
+
+                // Удаляем само расписание
                 context.Schedules.Remove(schedule);
+
                 context.SaveChanges();
                 return schedule.GetViewModel;
             }
 
             return null;
         }
+
 
         public ScheduleViewModel? GetElement(ScheduleSearchModel model)
         {

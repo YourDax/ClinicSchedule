@@ -17,7 +17,15 @@ class NurseModel extends UserModel {
     required this.departmentId,
     this.specialization, // инициализация нового поля
   });
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+          other is NurseModel &&
+              runtimeType == other.runtimeType &&
+              id == other.id;
 
+  @override
+  int get hashCode => id.hashCode;
   factory NurseModel.fromJson(Map<String, dynamic> json) {
     return NurseModel(
       id: json['id'],

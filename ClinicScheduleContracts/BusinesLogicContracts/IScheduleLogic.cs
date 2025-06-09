@@ -18,5 +18,6 @@ namespace ClinicScheduleContracts.BusinesLogicContracts
         bool Delete(ScheduleBindingModel model);
 
         bool GenerateSchedule(int departmentId, List<DateTime> dates);
+        bool DeleteByDate(int departmentId, DateTime date);
     }
 }

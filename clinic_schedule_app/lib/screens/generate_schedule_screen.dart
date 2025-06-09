@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
-import 'package:gallery_saver/gallery_saver.dart';
+//import 'package:gallery_saver/gallery_saver.dart';
 import '../../api/api_client.dart';
 import '../../models/department_model.dart';
 import '../models/Assignment.dart';
@@ -11,6 +11,8 @@ import 'dart:typed_data';
 import 'dart:io';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
 
 class GenerateScheduleScreen extends StatefulWidget {
   const GenerateScheduleScreen({Key? key}) : super(key: key);
@@ -30,6 +32,8 @@ class _GenerateScheduleScreenState extends State<GenerateScheduleScreen> {
   bool isLoadingSchedule = false;
 
   List<ScheduleCell> scheduleCells = [];
+  Set<DateTime> weekendDays = {};
+
 
   @override
   void initState() {
@@ -37,6 +41,36 @@ class _GenerateScheduleScreenState extends State<GenerateScheduleScreen> {
     _generateDays();
     _loadDepartments();
   }
+
+  String _getStorageKey() {
+    final deptId = selectedDepartment?.id ?? 0;
+    final weekStart = days.first;
+    final weekKey = '${weekStart.year}-${weekStart.month.toString().padLeft(2, '0')}-${weekStart.day.toString().padLeft(2, '0')}';
+    return 'weekendDays_${deptId}_$weekKey';
+  }
+
+  Future<void> _saveWeekendDays() async {
+    final prefs = await SharedPreferences.getInstance();
+    final key = _getStorageKey();
+    final dateStrings = weekendDays.map((d) => d.toIso8601String()).toList();
+    await prefs.setStringList(key, dateStrings);
+  }
+
+  Future<void> _loadWeekendDays() async {
+    final prefs = await SharedPreferences.getInstance();
+    final key = _getStorageKey();
+    final dateStrings = prefs.getStringList(key) ?? [];
+
+    final parsedDates = dateStrings
+        .map((s) => DateTime.tryParse(s))
+        .whereType<DateTime>()
+        .toSet();
+
+    setState(() {
+      weekendDays = parsedDates;
+    });
+  }
+
 
   void _generateDays() {
     final now = DateTime.now();
@@ -57,7 +91,9 @@ class _GenerateScheduleScreenState extends State<GenerateScheduleScreen> {
         departments = result;
         if (departments.isNotEmpty && selectedDepartment == null) {
           selectedDepartment = departments.first;
+          _generateDays(); // обязательно перед загрузкой выходных
           _loadSchedule();
+          _loadWeekendDays(); // загружаем после установки selectedDepartment и days
         }
       });
     } catch (e) {
@@ -109,6 +145,10 @@ class _GenerateScheduleScreenState extends State<GenerateScheduleScreen> {
   }
 
   Widget _buildShiftCell(DateTime date, int shiftNumber) {
+    if (weekendDays.contains(date)) {
+      return const Center(child: Text('Выходной', style: TextStyle(color: Colors.grey)));
+    }
+
     final cell = scheduleCells.firstWhere(
           (c) => _isSameDate(c.date, date),
       orElse: () => ScheduleCell(
@@ -208,7 +248,7 @@ class _GenerateScheduleScreenState extends State<GenerateScheduleScreen> {
   }
 
 
-  Future<void> _saveAsPng(GlobalKey key, BuildContext context) async {
+  /*Future<void> _saveAsPng(GlobalKey key, BuildContext context) async {
     try {
       // Получаем RenderRepaintBoundary
       final boundary = key.currentContext?.findRenderObject() as RenderRepaintBoundary?;
@@ -253,7 +293,7 @@ class _GenerateScheduleScreenState extends State<GenerateScheduleScreen> {
         SnackBar(content: Text('Ошибка при сохранении: $e')),
       );
     }
-  }
+  }*/
 
 
   bool _isSameDate(DateTime a, DateTime b) {
@@ -276,12 +316,13 @@ class _GenerateScheduleScreenState extends State<GenerateScheduleScreen> {
                 const Text('Неделя:'),
                 ToggleButtons(
                   isSelected: [isCurrentWeek, !isCurrentWeek],
-                  onPressed: (index) {
+                  onPressed: (index) async {
                     setState(() {
                       isCurrentWeek = index == 0;
                       _generateDays();
-                      _loadSchedule();
                     });
+                    await _loadSchedule();
+                    await _loadWeekendDays();
                   },
                   children: const [Text('Текущая'), Text('Следующая')],
                 ),
@@ -299,11 +340,13 @@ class _GenerateScheduleScreenState extends State<GenerateScheduleScreen> {
                 child: Text(dept.name),
               ))
                   .toList(),
-              onChanged: (value) {
+              onChanged: (value) async  {
                 setState(() {
                   selectedDepartment = value;
-                  _loadSchedule();
+                  _generateDays();
                 });
+                await _loadSchedule();
+                await _loadWeekendDays();
               },
             ),
             const SizedBox(height: 16),
@@ -366,16 +409,46 @@ class _GenerateScheduleScreenState extends State<GenerateScheduleScreen> {
                         for (var day in days)
                           TableRow(
                             children: [
-                              Container(
-                                color: Colors.white,
-                                child: Padding(
-                                  padding: const EdgeInsets.all(8.0),
-                                  child: Text(
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Text(
                                     '${_weekdayName(day.weekday)}, ${day.day.toString().padLeft(2, '0')}.${day.month.toString().padLeft(2, '0')}',
                                     textAlign: TextAlign.center,
                                     style: const TextStyle(fontWeight: FontWeight.w600),
                                   ),
-                                ),
+                                  Checkbox(
+                                    value: weekendDays.contains(day),
+                                      onChanged: (value) async {
+                                        setState(() {
+                                          if (value == true) {
+                                            weekendDays.add(day);
+                                          } else {
+                                            weekendDays.remove(day);
+                                          }
+                                        });
+
+                                        await _saveWeekendDays(); // <-- сохраняем изменения
+
+                                        if (value == true) {
+                                          try {
+                                            await ApiClient.deleteScheduleByDate(
+                                              departmentId: selectedDepartment!.id,
+                                              date: day,
+                                            );
+                                            await _loadSchedule();
+                                            ScaffoldMessenger.of(context).showSnackBar(
+                                              const SnackBar(content: Text('День помечен как выходной')),
+                                            );
+                                          } catch (e) {
+                                            ScaffoldMessenger.of(context).showSnackBar(
+                                              const SnackBar(content: Text('Ошибка при удалении расписания')),
+                                            );
+                                          }
+                                        }
+                                      }
+                                  ),
+                                ],
                               ),
                               Container(
                                 color: Colors.white,
@@ -411,7 +484,11 @@ class _GenerateScheduleScreenState extends State<GenerateScheduleScreen> {
                   });
 
                   try {
-                    final dates = days.map((d) => d.toIso8601String()).toList();
+                    final dates = days
+                        .where((d) => !weekendDays.contains(d))
+                        .map((d) => d.toIso8601String())
+                        .toList();
+
                     await ApiClient.generateSchedule(selectedDepartment!.id, dates);
 
                     ScaffoldMessenger.of(context).showSnackBar(
@@ -438,7 +515,7 @@ class _GenerateScheduleScreenState extends State<GenerateScheduleScreen> {
                     : const Text('Сгенерировать расписание'),
               ),
             ),
-            const SizedBox(height: 8),
+            /*const SizedBox(height: 8),
             SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(
@@ -446,7 +523,7 @@ class _GenerateScheduleScreenState extends State<GenerateScheduleScreen> {
                 label: const Text('Сохранить как PNG'),
                 onPressed: () => _saveAsPng(_tableKey, context),
               ),
-            ),
+            ),*/
 
 
           ],

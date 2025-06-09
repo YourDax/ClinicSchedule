@@ -17,7 +17,15 @@ class DoctorModel extends UserModel {
     required this.experienceYears,
     required this.departmentId,
   });
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+          other is DoctorModel &&
+              runtimeType == other.runtimeType &&
+              id == other.id;
 
+  @override
+  int get hashCode => id.hashCode;
   factory DoctorModel.fromJson(Map<String, dynamic> json) {
     return DoctorModel(
       id: json['id'],

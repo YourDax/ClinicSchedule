@@ -1,3 +1,4 @@
+import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import '../models/Assignment.dart';
 import '../models/ScheduleAssignmentBindingModel.dart';
@@ -71,12 +72,14 @@ class _EditShiftScreenState extends State<EditShiftScreen> {
     setState(() {
       selectedDoctors = List<DoctorModel?>.from(assignedDoctors);
       if (selectedDoctors.length < requiredDoctors) {
-        selectedDoctors.addAll(List<DoctorModel?>.filled(requiredDoctors - selectedDoctors.length, null));
+        selectedDoctors.addAll(List<DoctorModel?>.filled(
+            requiredDoctors - selectedDoctors.length, null));
       }
 
       selectedNurses = List<NurseModel?>.from(assignedNurses);
       if (selectedNurses.length < requiredNurses) {
-        selectedNurses.addAll(List<NurseModel?>.filled(requiredNurses - selectedNurses.length, null));
+        selectedNurses.addAll(List<NurseModel?>.filled(
+            requiredNurses - selectedNurses.length, null));
       }
     });
   }
@@ -84,7 +87,8 @@ class _EditShiftScreenState extends State<EditShiftScreen> {
 
   Future<void> _loadAvailableStaff() async {
     try {
-      final doctors = await ApiClient.getDoctorsByDepartment(widget.departmentId);
+      final doctors = await ApiClient.getDoctorsByDepartment(
+          widget.departmentId);
       final nurses = await ApiClient.getNursesByDepartment(widget.departmentId);
 
       final doctorIds = doctors.map((e) => e.id).toSet();
@@ -124,10 +128,58 @@ class _EditShiftScreenState extends State<EditShiftScreen> {
     }
   }
 
+  List<DoctorModel> _getFilteredDoctors(int currentIndex) {
+    final selectedIds = selectedDoctors
+        .asMap()
+        .entries
+        .where((entry) => entry.key != currentIndex && entry.value != null)
+        .map((entry) => entry.value!.id)
+        .toSet();
+
+    final assignedOtherShiftIds = widget.assignments
+        .where((a) => a.role == 1 && a.shiftId != widget.shiftId)
+        .map((a) => a.userId)
+        .toSet();
+
+    return availableDoctors.where((doc) {
+      final isOnVacation = doc.vacationDates.any((date) => _isSameDate(date, widget.date));
+      return !isOnVacation &&
+          !selectedIds.contains(doc.id) &&
+          !assignedOtherShiftIds.contains(doc.id);
+    }).toList();
+  }
+
+  List<NurseModel> _getFilteredNurses(int currentIndex) {
+    final selectedIds = selectedNurses
+        .asMap()
+        .entries
+        .where((entry) => entry.key != currentIndex && entry.value != null)
+        .map((entry) => entry.value!.id)
+        .toSet();
+
+    final assignedOtherShiftIds = widget.assignments
+        .where((a) => a.role == 0 && a.shiftId != widget.shiftId)
+        .map((a) => a.userId)
+        .toSet();
+
+    return availableNurses.where((nurse) {
+      final isOnVacation = nurse.vacationDates.any((date) => _isSameDate(date, widget.date));
+      return !isOnVacation &&
+          !selectedIds.contains(nurse.id) &&
+          !assignedOtherShiftIds.contains(nurse.id);
+    }).toList();
+  }
+
+
+
+  bool _isSameDate(DateTime a, DateTime b) =>
+      a.year == b.year && a.month == b.month && a.day == b.day;
+
   DateTime getDateTimeWithDayFix(DateTime date, int hour, int minute) {
     if (hour == 0 && minute == 0) {
       // Если время 00:00, значит это полночь следующего дня
-      return DateTime(date.year, date.month, date.day).add(const Duration(days: 1));
+      return DateTime(date.year, date.month, date.day).add(
+          const Duration(days: 1));
     }
     return DateTime(date.year, date.month, date.day, hour, minute);
   }
@@ -135,22 +187,26 @@ class _EditShiftScreenState extends State<EditShiftScreen> {
 
   void _saveShift() async {
     try {
-      final assignedDoctorIds = selectedDoctors.whereType<DoctorModel>().map((e) => e.id).toList();
-      final assignedNurseIds = selectedNurses.whereType<NurseModel>().map((e) => e.id).toList();
+      final assignedDoctorIds = selectedDoctors.whereType<DoctorModel>().map((
+          e) => e.id).toList();
+      final assignedNurseIds = selectedNurses.whereType<NurseModel>().map((
+          e) => e.id).toList();
 
       int shiftId = widget.shiftId;
 
       // Если shiftId == -1, значит надо проверить существует ли смена с таким временем и департаментом
       if (shiftId == -1) {
         // Получаем смены по дате и департаменту
-        final shifts = await ApiClient.getShiftsByDateAndDepartment(widget.departmentId, widget.date);
+        final shifts = await ApiClient.getShiftsByDateAndDepartment(
+            widget.departmentId, widget.date);
 
         final startHour = widget.startTime?.hour ?? 8;
         final startMinute = widget.startTime?.minute ?? 0;
         final endHour = widget.endTime?.hour ?? 16;
         final endMinute = widget.endTime?.minute ?? 0;
 
-        final startTime = getDateTimeWithDayFix(widget.date, startHour, startMinute);
+        final startTime = getDateTimeWithDayFix(
+            widget.date, startHour, startMinute);
         final endTime = getDateTimeWithDayFix(widget.date, endHour, endMinute);
 
         final defaultShift = ShiftViewModel(
@@ -163,7 +219,9 @@ class _EditShiftScreenState extends State<EditShiftScreen> {
         );
 
         final existingShift = shifts.firstWhere(
-              (s) => s.startTime.hour == startHour && s.endTime.hour == endHour && s.departmentId == widget.departmentId,
+              (s) =>
+          s.startTime.hour == startHour && s.endTime.hour == endHour &&
+              s.departmentId == widget.departmentId,
           orElse: () => defaultShift,
         );
 
@@ -186,7 +244,6 @@ class _EditShiftScreenState extends State<EditShiftScreen> {
           }
 
           shiftId = existingShift.id;
-
         } else {
           // Смены нет — создаём новую
           final created = await ApiClient.createShift(
@@ -203,9 +260,12 @@ class _EditShiftScreenState extends State<EditShiftScreen> {
             throw Exception('Не удалось создать смену');
           }
 
-          final newShifts = await ApiClient.getShiftsByDateAndDepartment(widget.departmentId, widget.date);
+          final newShifts = await ApiClient.getShiftsByDateAndDepartment(
+              widget.departmentId, widget.date);
           final newShift = newShifts.firstWhere(
-                (s) => s.startTime.hour == startHour && s.endTime.hour == endHour && s.departmentId == widget.departmentId,
+                (s) =>
+            s.startTime.hour == startHour && s.endTime.hour == endHour &&
+                s.departmentId == widget.departmentId,
             orElse: () => throw Exception('Не удалось получить id смены'),
           );
           shiftId = newShift.id;
@@ -213,7 +273,8 @@ class _EditShiftScreenState extends State<EditShiftScreen> {
       }
 
       // Получаем существующее расписание
-      final existingSchedule = await ApiClient.getScheduleByDateAndDepartment(widget.departmentId, widget.date);
+      final existingSchedule = await ApiClient.getScheduleByDateAndDepartment(
+          widget.departmentId, widget.date);
 
       int scheduleId;
 
@@ -226,7 +287,7 @@ class _EditShiftScreenState extends State<EditShiftScreen> {
             date: widget.date,
             departmentId: widget.departmentId,
             assignments: [],
-            shifts: [],  // Передаем пустой список смен
+            shifts: [], // Передаем пустой список смен
           ),
         );
 
@@ -235,7 +296,8 @@ class _EditShiftScreenState extends State<EditShiftScreen> {
           throw Exception('Не удалось создать расписание');
         }
 
-        final newSchedule = await ApiClient.getScheduleByDateAndDepartment(widget.departmentId, widget.date);
+        final newSchedule = await ApiClient.getScheduleByDateAndDepartment(
+            widget.departmentId, widget.date);
         if (newSchedule.isEmpty) {
           throw Exception('Не удалось получить id расписания после создания');
         }
@@ -245,30 +307,35 @@ class _EditShiftScreenState extends State<EditShiftScreen> {
 
       // Формируем назначения (assignments)
       final assignments = <ScheduleAssignmentBindingModel>[
-        ...assignedDoctorIds.map((id) => ScheduleAssignmentBindingModel(
-          shiftId: shiftId,
-          staffId: id,
-          role: 1,
-          scheduleId: scheduleId,
-        )),
-        ...assignedNurseIds.map((id) => ScheduleAssignmentBindingModel(
-          shiftId: shiftId,
-          staffId: id,
-          role: 0,
-          scheduleId: scheduleId,
-        )),
+        ...assignedDoctorIds.map((id) =>
+            ScheduleAssignmentBindingModel(
+              shiftId: shiftId,
+              staffId: id,
+              role: 1,
+              scheduleId: scheduleId,
+            )),
+        ...assignedNurseIds.map((id) =>
+            ScheduleAssignmentBindingModel(
+              shiftId: shiftId,
+              staffId: id,
+              role: 0,
+              scheduleId: scheduleId,
+            )),
       ];
 
       // Существующие назначения
       final existingAssignments = widget.assignments;
 
       // Ключи новых назначений
-      final newAssignmentsSet = assignments.map((a) => '${a.role}_${a.staffId}').toSet();
+      final newAssignmentsSet = assignments.map((a) => '${a.role}_${a.staffId}')
+          .toSet();
 
       for (final old in existingAssignments) {
-        print('Удаляем назначение: user=${old.userId}, scheduleId=${old.scheduleId}');
+        print('Удаляем назначение: user=${old.userId}, scheduleId=${old
+            .scheduleId}');
         if (old.scheduleId == null) {
-          throw Exception('У назначения отсутствует scheduleId (user: ${old.userId})');
+          throw Exception(
+              'У назначения отсутствует scheduleId (user: ${old.userId})');
         }
 
         final key = '${old.role}_${old.userId}';
@@ -280,7 +347,8 @@ class _EditShiftScreenState extends State<EditShiftScreen> {
             scheduleId: old.scheduleId!,
           );
           if (!success) {
-            throw Exception('Не удалось удалить устаревшее назначение: user ${old.userId}');
+            throw Exception(
+                'Не удалось удалить устаревшее назначение: user ${old.userId}');
           }
         }
       }
@@ -301,7 +369,9 @@ class _EditShiftScreenState extends State<EditShiftScreen> {
 
         final success = await ApiClient.addAssignment(assignment);
         if (!success) {
-          throw Exception('Не удалось добавить назначение для пользователя ${assignment.staffId}');
+          throw Exception(
+              'Не удалось добавить назначение для пользователя ${assignment
+                  .staffId}');
         }
       }
 
@@ -314,11 +384,6 @@ class _EditShiftScreenState extends State<EditShiftScreen> {
       );
     }
   }
-
-
-
-
-
 
 
   DoctorModel? _findDoctorById(int userId) {
@@ -339,7 +404,12 @@ class _EditShiftScreenState extends State<EditShiftScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Редактирование смены ${widget.shiftId} - ${widget.date.day}.${widget.date.month}.${widget.date.year}'),
+        title: Text(
+          'Редактирование смены ${widget.shiftId} - '
+              '${widget.date.day.toString().padLeft(2, '0')}.'
+              '${widget.date.month.toString().padLeft(2, '0')}.'
+              '${widget.date.year}',
+        ),
       ),
       body: Padding(
         padding: const EdgeInsets.all(16),
@@ -350,17 +420,21 @@ class _EditShiftScreenState extends State<EditShiftScreen> {
                 Expanded(
                   child: TextFormField(
                     initialValue: requiredDoctors.toString(),
-                    decoration: const InputDecoration(labelText: 'Врачей требуется'),
+                    decoration: const InputDecoration(
+                        labelText: 'Врачей требуется'),
                     keyboardType: TextInputType.number,
                     onChanged: (val) {
                       final count = int.tryParse(val) ?? 1;
                       setState(() {
+                        requiredDoctors = count;
                         if (count > selectedDoctors.length) {
-                          selectedDoctors.addAll(List<DoctorModel?>.filled(count - selectedDoctors.length, null));
+                          selectedDoctors.addAll(
+                            List<DoctorModel?>.filled(
+                                count - selectedDoctors.length, null),
+                          );
                         } else if (count < selectedDoctors.length) {
                           selectedDoctors = selectedDoctors.sublist(0, count);
                         }
-                        requiredDoctors = count;
                       });
                     },
                   ),
@@ -369,17 +443,21 @@ class _EditShiftScreenState extends State<EditShiftScreen> {
                 Expanded(
                   child: TextFormField(
                     initialValue: requiredNurses.toString(),
-                    decoration: const InputDecoration(labelText: 'Медсестёр требуется'),
+                    decoration: const InputDecoration(
+                        labelText: 'Медсестёр требуется'),
                     keyboardType: TextInputType.number,
                     onChanged: (val) {
                       final count = int.tryParse(val) ?? 1;
                       setState(() {
+                        requiredNurses = count;
                         if (count > selectedNurses.length) {
-                          selectedNurses.addAll(List<NurseModel?>.filled(count - selectedNurses.length, null));
+                          selectedNurses.addAll(
+                            List<NurseModel?>.filled(
+                                count - selectedNurses.length, null),
+                          );
                         } else if (count < selectedNurses.length) {
                           selectedNurses = selectedNurses.sublist(0, count);
                         }
-                        requiredNurses = count;
                       });
                     },
                   ),
@@ -392,15 +470,25 @@ class _EditShiftScreenState extends State<EditShiftScreen> {
                   ? const Center(child: CircularProgressIndicator())
                   : ListView(
                 children: [
-                  const Text('Выбор врачей:', style: TextStyle(fontWeight: FontWeight.bold)),
+                  const Text(
+                    'Выбор врачей:',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 8),
                   ...List.generate(requiredDoctors, (index) {
                     if (index >= selectedDoctors.length) return Container();
                     final selected = selectedDoctors[index];
-                    final value = (selected != null && availableDoctors.contains(selected)) ? selected : null;
+
+                    final filteredDoctors = _getFilteredDoctors(index);
+
+                    final value = (selected != null && !selected.vacationDates.any((date) => _isSameDate(date, widget.date)))
+                        ? filteredDoctors.firstWhereOrNull((d) => d.id == selected.id)
+                        : null;
+
 
                     return DropdownButtonFormField<DoctorModel>(
                       value: value,
-                      items: availableDoctors.map((doc) {
+                      items: _getFilteredDoctors(index).map((doc) {
                         return DropdownMenuItem<DoctorModel>(
                           value: doc,
                           child: Text(doc.fullname),
@@ -414,16 +502,27 @@ class _EditShiftScreenState extends State<EditShiftScreen> {
                       decoration: InputDecoration(labelText: 'Врач №${index + 1}'),
                     );
                   }),
+
                   const SizedBox(height: 16),
-                  const Text('Выбор медсестёр:', style: TextStyle(fontWeight: FontWeight.bold)),
+                  const Text(
+                    'Выбор медсестёр:',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 8),
                   ...List.generate(requiredNurses, (index) {
                     if (index >= selectedNurses.length) return Container();
                     final selected = selectedNurses[index];
-                    final value = (selected != null && availableNurses.contains(selected)) ? selected : null;
+
+                    final filteredNurses = _getFilteredNurses(index);
+
+                    final value = (selected != null && !selected.vacationDates.any((date) => _isSameDate(date, widget.date)))
+                        ? filteredNurses.firstWhereOrNull((n) => n.id == selected.id)
+                        : null;
+
 
                     return DropdownButtonFormField<NurseModel>(
                       value: value,
-                      items: availableNurses.map((nurse) {
+                      items: _getFilteredNurses(index).map((nurse) {
                         return DropdownMenuItem<NurseModel>(
                           value: nurse,
                           child: Text(nurse.fullname),
@@ -437,9 +536,11 @@ class _EditShiftScreenState extends State<EditShiftScreen> {
                       decoration: InputDecoration(labelText: 'Медсестра №${index + 1}'),
                     );
                   }),
+
                 ],
               ),
             ),
+            const SizedBox(height: 8),
             ElevatedButton(
               onPressed: _saveShift,
               child: const Text('Сохранить'),

@@ -738,6 +738,20 @@ namespace ClinicRestApi.Controllers
                 throw;
             }
         }
+        [HttpDelete]
+        public bool DeleteByDate(int departmentId, DateTime date)
+        {
+            try
+            {
+                return _schedule.DeleteByDate(departmentId, date);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Ошибка удаления расписания");
+                throw;
+            }
+        }
+
 
 
     }

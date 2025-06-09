@@ -70,6 +70,19 @@ class ApiClient {
     }
   }
 
+  static Future<void> deleteScheduleByDate({
+    required int departmentId,
+    required DateTime date,
+  }) async {
+    final response = await http.delete(
+      Uri.parse('$baseUrl/Main/DeleteByDate?departmentId=$departmentId&date=${date.toIso8601String()}'),
+      headers: {'Content-Type': 'application/json'},
+    );
+
+    if (response.statusCode != 200) {
+      throw Exception('Не удалось удалить расписание');
+    }
+  }
 
   static Future<UserModel?> register(
       String fullname,

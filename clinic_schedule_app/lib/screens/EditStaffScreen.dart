@@ -32,6 +32,8 @@ class _EditStaffScreenState extends State<EditStaffScreen> {
   late TextEditingController _specializationController;
 
   DateTime? _birthdate;
+  DateTime? _vacationStart;
+  DateTime? _vacationEnd;
 
   @override
   void initState() {
@@ -52,6 +54,11 @@ class _EditStaffScreenState extends State<EditStaffScreen> {
     } else {
       _specializationController = TextEditingController(text: (staff is NurseModel ? (staff.specialization ?? '') : ''));
       _experienceYearsController = TextEditingController(text: '0'); // не нужен для медсестры
+    }
+    if (staff != null && staff.vacationDates != null && staff.vacationDates.isNotEmpty) {
+      // Если есть даты отпуска, ставим первый как start, последний как end
+      _vacationStart = staff.vacationDates.first;
+      _vacationEnd = staff.vacationDates.last;
     }
   }
 
@@ -81,7 +88,45 @@ class _EditStaffScreenState extends State<EditStaffScreen> {
       });
     }
   }
+  Future<void> _selectDate(BuildContext context, bool isStart) async {
+    final now = DateTime.now();
+    DateTime initialDate = isStart
+        ? (_vacationStart ?? now)
+        : (_vacationEnd ?? (_vacationStart ?? now));
+    DateTime firstDate = isStart ? DateTime(1900) : (_vacationStart ?? DateTime(1900));
+    DateTime lastDate = DateTime(now.year + 10);
 
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: initialDate,
+      firstDate: firstDate,
+      lastDate: lastDate,
+    );
+    if (picked != null) {
+      setState(() {
+        if (isStart) {
+          _vacationStart = picked;
+          // Если конец раньше начала — сбросить конец
+          if (_vacationEnd != null && _vacationEnd!.isBefore(picked)) {
+            _vacationEnd = null;
+          }
+        } else {
+          _vacationEnd = picked;
+        }
+      });
+    }
+  }
+  List<String> _generateVacationDates() {
+    if (_vacationStart == null || _vacationEnd == null) return [];
+
+    List<String> dates = [];
+    DateTime current = _vacationStart!;
+    while (!current.isAfter(_vacationEnd!)) {
+      dates.add(current.toIso8601String());
+      current = current.add(const Duration(days: 1));
+    }
+    return dates;
+  }
 
   void _save() async {
     if (!_formKey.currentState!.validate()) return;
@@ -99,16 +144,25 @@ class _EditStaffScreenState extends State<EditStaffScreen> {
       );
       return;
     }
+    if ((_vacationStart != null && _vacationEnd == null) ||
+        (_vacationStart == null && _vacationEnd != null) ||
+        (_vacationStart != null && _vacationEnd != null && _vacationEnd!.isBefore(_vacationStart!))) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Пожалуйста, корректно укажите даты отпуска')),
+      );
+      return;
+    }
 
     final data = {
       'login': _loginController.text,
-      'password': _passwordController.text, // всегда отправляем пароль (может быть пустым)
+      'password': _passwordController.text,
       'fullname': _fullNameController.text,
       'birthdate': _birthdate!.toIso8601String(),
       'phoneNumber': _phoneController.text,
       'workedHours': int.tryParse(_workedHoursController.text) ?? 0,
       'departmentId': widget.departmentId,
       'role': widget.isDoctor ? 1 : 0,
+      'vacationDates': _generateVacationDates(),
     };
 
     if (widget.isDoctor) {
@@ -226,6 +280,37 @@ class _EditStaffScreenState extends State<EditStaffScreen> {
                 controller: _workedHoursController,
                 decoration: const InputDecoration(labelText: 'Отработанные часы'),
                 keyboardType: TextInputType.number,
+              ),
+              Text('Отпуск:', style: Theme.of(context).textTheme.titleMedium),
+              const SizedBox(height: 8),
+
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(_vacationStart == null
+                        ? 'Дата начала отпуска не выбрана'
+                        : 'Начало: ${_vacationStart!.day.toString().padLeft(2, '0')}.${_vacationStart!.month.toString().padLeft(2, '0')}.${_vacationStart!.year}'),
+                  ),
+                  ElevatedButton(
+                    onPressed: () => _selectDate(context, true),
+                    child: const Text('Выбрать'),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(_vacationEnd == null
+                        ? 'Дата конца отпуска не выбрана'
+                        : 'Конец: ${_vacationEnd!.day.toString().padLeft(2, '0')}.${_vacationEnd!.month.toString().padLeft(2, '0')}.${_vacationEnd!.year}'),
+                  ),
+                  ElevatedButton(
+                    onPressed: _vacationStart == null ? null : () => _selectDate(context, false),
+                    child: const Text('Выбрать'),
+                  ),
+                ],
               ),
               const SizedBox(height: 32),
               ElevatedButton(

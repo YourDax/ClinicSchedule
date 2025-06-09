@@ -358,5 +358,64 @@ namespace ClinicScheduleBusinessLogic.BusinessLogic
 
             return true;
         }
+        public bool DeleteByDate(int departmentId, DateTime date)
+        {
+            _logger.LogInformation("Удаление расписания и смен по дате. DepartmentId: {DepartmentId}, Date: {Date}", departmentId, date);
+
+            // Получаем все расписания на дату
+            var schedules = _scheduleStorage.GetFilteredList(new ScheduleSearchModel
+            {
+                departmentId = departmentId,
+                date = date.Date
+            });
+
+            if (schedules == null || schedules.Count == 0)
+            {
+                _logger.LogWarning("Нет расписаний для удаления");
+                return false;
+            }
+
+            foreach (var schedule in schedules)
+            {
+                _logger.LogInformation("Удаление расписания. Id: {Id}", schedule.id);
+
+                // Удаляем расписание (вместе с назначениями)
+                var result = _scheduleStorage.Delete(new ScheduleBindingModel
+                {
+                    id = schedule.id
+                });
+
+                if (result == null)
+                {
+                    _logger.LogWarning("Не удалось удалить расписание. Id: {Id}", schedule.id);
+                    return false;
+                }
+            }
+
+            // Удаляем смены на эту дату и департамент
+            var shifts = _shiftStorage.GetFilteredList(new ShiftSearchModel
+            {
+                departmentId = departmentId
+            })?.Where(s => s.startTime.Date == date.Date).ToList();
+
+            if (shifts != null && shifts.Count > 0)
+            {
+                foreach (var shift in shifts)
+                {
+                    _logger.LogInformation("Удаляется смена. Id: {Id}, {StartTime}-{EndTime}", shift.id, shift.startTime, shift.endTime);
+                    var deleted = _shiftStorage.Delete(new ShiftBindingModel { id = shift.id });
+                    if (deleted == null)
+                    {
+                        _logger.LogWarning("Не удалось удалить смену. Id: {Id}", shift.id);
+                        return false;
+                    }
+                }
+            }
+
+            _logger.LogInformation("Удаление завершено. Дата: {Date}, DepartmentId: {DepartmentId}", date.ToShortDateString(), departmentId);
+            return true;
+        }
+
+
     }
 }
